@@ -1,1 +1,1 @@
-# 👋 Welcome to Qianrong's Log! 
+# 👋 Welcome to Q's Log! 
