@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss  xmlns:atom="http://www.w3.org/2005/Atom" 
+      xmlns:media="http://search.yahoo.com/mrss/" 
+      xmlns:content="http://purl.org/rss/1.0/modules/content/" 
+      xmlns:dc="http://purl.org/dc/elements/1.1/" 
+      version="2.0">
+<channel>
+<title>Qianrong Wu</title>
+<link>https://qianrongwu.com/</link>
+<atom:link href="https://qianrongwu.com/index.xml" rel="self" type="application/rss+xml"/>
+<description>Measurement science for trust and safety.</description>
+<generator>quarto-1.10.18</generator>
+<lastBuildDate>Sat, 29 Aug 2026 07:00:00 GMT</lastBuildDate>
+<item>
+  <title>Test post</title>
+  <link>https://qianrongwu.com/posts/hello/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>Pipeline check.</p>
+
+
+
+ ]]></description>
+  <guid>https://qianrongwu.com/posts/hello/</guid>
+  <pubDate>Sat, 29 Aug 2026 07:00:00 GMT</pubDate>
+</item>
+</channel>
+</rss>
