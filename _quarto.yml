@@ -1,0 +1,30 @@
+project:
+  type: website
+  output-dir: _site
+  resources:
+    - CNAME
+
+website:
+  title: "Qianrong Wu"
+  site-url: "https://qianrongwu.com"
+  description: "Measurement science for trust and safety."
+  open-graph: true
+  twitter-card: true
+  navbar:
+    right:
+      - text: About
+        href: about.qmd
+      - text: Research
+        href: research.qmd
+      - icon: github
+        href: https://github.com/<你的用户名>
+      - icon: rss
+        href: index.xml
+
+format:
+  html:
+    theme: cosmo
+    css: styles.css
+    toc: true
+
+bibliography: references.bib
