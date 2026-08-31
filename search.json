@@ -7,13 +7,6 @@
     "text": "About this blog"
   },
   {
-    "objectID": "posts/hello/index.html",
-    "href": "posts/hello/index.html",
-    "title": "Test post",
-    "section": "",
-    "text": "Pipeline check."
-  },
-  {
     "objectID": "posts/detectors-inherit/index.html",
     "href": "posts/detectors-inherit/index.html",
     "title": "Detectors Inherit the Systems That Label Them",
@@ -72,8 +65,8 @@
   {
     "objectID": "index.html",
     "href": "index.html",
-    "title": "qianrongwu-site",
+    "title": "Welcome to Q’s blog!",
     "section": "",
-    "text": "Detectors Inherit the Systems That Label Them\n\n\n\ndetection\n\ntraining-data\n\nsecurity-ml\n\nlabel\n\n\n\nIn adversarial systems, labels are produced by the detector.\n\n\n\n\n\nAug 30, 2026\n\n\n\n\n\n\n\n\n\n\n\n\nTest post\n\n\n\n\n\n\n\n\nAug 29, 2026\n\n\n\n\n\nNo matching items"
+    "text": "Detectors Inherit the Systems That Label Them\n\n\n\ndetection\n\ntraining-data\n\nsecurity-ml\n\nlabel\n\n\n\nIn adversarial systems, labels are produced by the detector.\n\n\n\n\n\nAug 30, 2026\n\n\n\n\n\nNo matching items"
   }
 ]

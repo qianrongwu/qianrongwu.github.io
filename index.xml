@@ -241,22 +241,5 @@
   <pubDate>Sun, 30 Aug 2026 07:00:00 GMT</pubDate>
   <media:content url="https://qianrongwu.com/posts/detectors-inherit/figure.png" medium="image" type="image/png" height="74" width="144"/>
 </item>
-<item>
-  <title>Test post</title>
-  <link>https://qianrongwu.com/posts/hello/</link>
-  <description><![CDATA[ 
-
-
-
-
-
-<p>Pipeline check.</p>
-
-
-
- ]]></description>
-  <guid>https://qianrongwu.com/posts/hello/</guid>
-  <pubDate>Sat, 29 Aug 2026 07:00:00 GMT</pubDate>
-</item>
 </channel>
 </rss>
