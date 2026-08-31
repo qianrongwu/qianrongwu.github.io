@@ -14,10 +14,66 @@
     "text": "Pipeline check."
   },
   {
+    "objectID": "posts/detectors-inherit/index.html",
+    "href": "posts/detectors-inherit/index.html",
+    "title": "Detectors Inherit the Systems That Label Them",
+    "section": "",
+    "text": "Detection models are usually trained on historical labels.\nIn adversarial systems, those labels are rarely neutral.\nConsider account takeover detection. A login attempt may become a confirmed positive because the existing system challenged it, the challenge failed, the user later recovered the account, or support confirmed the compromise.\nBut what about an attack the existing detector never noticed?\nOften, nothing happens. No challenge, no review, no recovery signal. The event remains unlabeled—or worse, is treated as negative.\nThis creates a simple but important problem:\nThe result is a feedback loop: detectors tend to inherit the blind spots of the systems that generated their labels."
+  },
+  {
+    "objectID": "posts/detectors-inherit/index.html#labels-are-selectively-observed",
+    "href": "posts/detectors-inherit/index.html#labels-are-selectively-observed",
+    "title": "Detectors Inherit the Systems That Label Them",
+    "section": "Labels are selectively observed",
+    "text": "Labels are selectively observed\nLet \\(Y\\) denote whether an event is truly malicious and \\(S\\) whether the existing system selects it for inspection.\nIn many production pipelines, we observe \\(Y\\) reliably only when \\(S = 1\\).\nThe problem is that selection is not random:\n\\[P(S = 1 \\mid X, Y) \\neq P(S = 1)\\]\nThe incumbent detector selects examples using features \\(X\\) that are themselves correlated with maliciousness.\nSo the missing labels are missing not at random.\nThis matters even if the labeling process after selection is perfect.\nImagine two kinds of account takeover:\n\nLoud attacks: high velocity, repeated IPs, obvious automation.\nQuiet attacks: low velocity, novel devices, unusual geography, but otherwise normal behavior.\n\nSuppose the incumbent detector was built mostly around velocity. In a simulation, it catches:\n\n88.7% of loud attacks\n6.4% of quiet attacks\n\nThere are 15,831 true attacks in total.\nOnly 8,552 become observed positives. The remaining 7,279 attacks are never surfaced by the incumbent and therefore look benign in the training data.\nThat is already enough to distort evaluation."
+  },
+  {
+    "objectID": "posts/detectors-inherit/index.html#the-same-model-can-appear-to-have-very-different-recall",
+    "href": "posts/detectors-inherit/index.html#the-same-model-can-appear-to-have-very-different-recall",
+    "title": "Detectors Inherit the Systems That Label Them",
+    "section": "The same model can appear to have very different recall",
+    "text": "The same model can appear to have very different recall\nSuppose a candidate model has true recall of 57.2%.\nEvaluate it using the production labels generated above, and estimated recall becomes:\n\n\n\nestimator\nestimated recall\n\n\n\n\nexisting warehouse labels\n78.0%\n\n\nsampled holdout, unweighted\n45.4%\n\n\nsampled holdout, weighted\n56.4%\n\n\ntrue recall\n57.2%\n\n\n\n\n\n\nThree estimates of the same model’s recall. The dashed line is the truth; the whisker is a bootstrap interval on the weighted estimate.\n\n\nThe first estimate is not merely noisy. It is systematically optimistic.\nIts denominator is effectively:\n\nattacks the existing system already knows how to find\n\nrather than:\n\nall attacks\n\nMore production traffic does not fix this. With enough data, the biased estimate simply becomes more precise."
+  },
+  {
+    "objectID": "posts/detectors-inherit/index.html#why-this-affects-training-not-just-metrics",
+    "href": "posts/detectors-inherit/index.html#why-this-affects-training-not-just-metrics",
+    "title": "Detectors Inherit the Systems That Label Them",
+    "section": "Why this affects training, not just metrics",
+    "text": "Why this affects training, not just metrics\nIf this only corrupted a dashboard, we could add a warning label and move on.\nBut the same data is usually used for training.\nThe model sees detected attacks as positives and many undetected attacks as negatives. It therefore learns a decision boundary that resembles the incumbent detector.\nIn the same simulation, the candidate model detects:\n\n79.5% of loud attacks\n30.0% of quiet attacks\n\nYet evaluation against incumbent-generated labels largely hides this difference.\nAfter deployment, the new model determines which examples become visible in the next round of data.\nThe loop becomes:\n\\[\\text{detector} \\rightarrow \\text{selection} \\rightarrow \\text{labels} \\rightarrow \\text{next detector}\\]\nWithout an independent source of labels, blind spots can persist across model generations."
+  },
+  {
+    "objectID": "posts/detectors-inherit/index.html#breaking-the-feedback-loop",
+    "href": "posts/detectors-inherit/index.html#breaking-the-feedback-loop",
+    "title": "Detectors Inherit the Systems That Label Them",
+    "section": "Breaking the feedback loop",
+    "text": "Breaking the feedback loop\nThe cleanest solution is conceptually simple:\n\nRandomly observe a small amount of traffic independently of the detector.\n\nFor that traffic, allow downstream outcomes or manual investigation to establish the label.\nThis produces a sample in which label availability is determined by a known sampling policy rather than by the incumbent detector.\nIn security systems, uniform sampling is often impractical. Allowing high-risk traffic through is more expensive than allowing low-risk traffic through.\nSo suppose we sample different risk groups at different rates.\nThen a plain average over the holdout is still biased, because its attack mix no longer matches the population’s. In the simulation that error is about the same size as the one we just removed, pointing the other way.\nRecord the inclusion probability \\(p_i\\) for every sampled event and define\n\\[w_i = \\frac{1}{p_i}.\\]\nThen estimate recall with\n\\[\\widehat{R} = \\frac{\\sum_{i \\in H} w_i \\, \\text{pred}_i \\, Y_i}{\\sum_{i \\in H} w_i \\, Y_i}.\\]\nThis is inverse-probability weighting, or a Horvitz–Thompson style estimator.\nThe important part is that \\(p_i\\) is known because we chose it.\nWe are correcting for a sampling decision we control, rather than trying to model an unknown adversarial selection mechanism after the fact.\nIn the simulation:\n\nunweighted holdout recall: 45.4%\nweighted holdout recall: 56.4%\ntrue recall: 57.2%\n\nThe tradeoff is variance. Small sampling probabilities create large weights, which widen confidence intervals.\nSo the practical design problem becomes:\n\nHow much unbiased measurement can we afford?\n\nThat is a much healthier problem than unknowingly optimizing against biased labels.\nIt is also not only a statistical question. On a platform serving young users, holdout exposure has to be capped, guardrailed, and reviewed, and those limits bind before the variance calculation does."
+  },
+  {
+    "objectID": "posts/detectors-inherit/index.html#a-second-feedback-path-exposing-the-model-score-to-the-labeler",
+    "href": "posts/detectors-inherit/index.html#a-second-feedback-path-exposing-the-model-score-to-the-labeler",
+    "title": "Detectors Inherit the Systems That Label Them",
+    "section": "A second feedback path: exposing the model score to the labeler",
+    "text": "A second feedback path: exposing the model score to the labeler\nThere is another, easier-to-fix source of dependence.\nSuppose an LLM or human annotator receives a rich case summary:\n\ndevice history\nIP reputation\naccount graph\npost-login activity\ngeolocation\n\nand also receives the incumbent model’s risk score.\nThe score is informative, so including it seems reasonable.\nBut now the labeler is no longer independent of the detector being evaluated.\nIn a simulation, exposing the score increases agreement with the incumbent:\n\n\n\n\nscore hidden\nscore exposed\n\n\n\n\nagreement with incumbent\n84.3%\n88.7%\n\n\nrecall vs. truth\n73.5%\n69.4%\n\n\nrecall on loud attacks\n92.7%\n93.9%\n\n\nrecall on quiet attacks\n35.4%\n20.8%\n\n\n\nAgreement improves.\nActual coverage gets worse.\nThe largest loss appears exactly where independent labeling is most valuable: attacks the incumbent already struggles to detect.\nThis is not a failure of a poorly built model. It is what a careful reasoner does with an authoritative-looking number in front of it, which is why using a stronger model does not remove the effect.\nThis also shows why human–LLM agreement alone is not enough to validate a labeler.\nTwo labelers can agree because they share the same source of bias.\nThe simulation makes that concrete. Measured on the incumbent-selected sample, the annotator agrees with the human labeler 88.0% of the time. Measured on the independent holdout, 87.9%. Its actual recall against truth across those two samples is 93.1% and 73.5%.\nAgreement does not move. The quantity it stands in for moves by a fifth.\n\n\n\nLeft: agreement holds steady across two samples while recall against truth does not. Center and right: exposing the incumbent score buys agreement with the incumbent and pays for it in the quiet segment.\n\n\nIf the goal is independent evidence, hide the incumbent score."
+  },
+  {
+    "objectID": "posts/detectors-inherit/index.html#what-i-would-do-in-practice",
+    "href": "posts/detectors-inherit/index.html#what-i-would-do-in-practice",
+    "title": "Detectors Inherit the Systems That Label Them",
+    "section": "What I would do in practice",
+    "text": "What I would do in practice\nFor a production detection system, I would start with four things.\n1. Document label provenance. For every positive label, record why it exists: which enforcement action surfaced it, which downstream signal confirmed it, and what had to happen for the event to become observable.\n2. Measure performance by attack segment. Aggregate recall can hide large coverage gaps. If the dataset cannot support meaningful segmentation, that itself is useful evidence about label coverage.\n3. Create a small independent holdout. Stratify it, cap exposure, add safety guardrails, and log the inclusion probability for every sampled event.\n4. Keep incumbent scores out of independent labeling. Especially when using LLM-assisted review. The purpose of an independent labeler is to add information, not reproduce the current model’s belief.\nNone of these requires a more sophisticated detector.\nThey require treating label generation as part of the ML system."
+  },
+  {
+    "objectID": "posts/detectors-inherit/index.html#simulator",
+    "href": "posts/detectors-inherit/index.html#simulator",
+    "title": "Detectors Inherit the Systems That Label Them",
+    "section": "Simulator",
+    "text": "Simulator\nThe examples above are synthetic because production data rarely contains the latent truth needed to measure this bias directly.\nI built a small simulator that makes the full data-generating process observable:\ngithub.com/qianrongwu/labels-are-estimators\nIt runs in about thirty seconds. The knobs worth turning are in Config.\nPush the two holdout rates apart and watch the weighted estimate stay centered while its interval widens.\nRaise the share of quiet attacks and watch the warehouse-label estimate grow more confident as it grows more wrong."
+  },
+  {
     "objectID": "index.html",
     "href": "index.html",
     "title": "qianrongwu-site",
     "section": "",
-    "text": "Test post\n\n\n\n\n\n\n\n\nAug 29, 2026\n\n\n\n\n\nNo matching items"
+    "text": "Detectors Inherit the Systems That Label Them\n\n\n\ndetection\n\ntraining-data\n\nsecurity-ml\n\nlabel\n\n\n\nIn adversarial systems, labels are produced by the detector.\n\n\n\n\n\nAug 30, 2026\n\n\n\n\n\n\n\n\n\n\n\n\nTest post\n\n\n\n\n\n\n\n\nAug 29, 2026\n\n\n\n\n\nNo matching items"
   }
 ]

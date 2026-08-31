@@ -6,10 +6,10 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Harlow Malloc">
-<meta name="dcterms.date" content="2026-08-29">
+<meta name="dcterms.date" content="2026-08-30">
+<meta name="description" content="In adversarial systems, labels are produced by the detector.">
 
-<title>Post With Code – qianrongwu-site</title>
+<title>Detectors Inherit the Systems That Label Them – Q’s Blog</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -76,11 +76,52 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 <link rel="stylesheet" href="../../styles.css">
+<meta property="og:title" content="Detectors Inherit the Systems That Label Them – Q’s Blog">
+<meta property="og:description" content="In adversarial systems, labels are produced by the detector.">
+<meta property="og:image" content="https://qianrongwu.com/posts/detectors-inherit/figure.png">
+<meta property="og:site_name" content="Q’s Blog">
+<meta property="og:image:height" content="714">
+<meta property="og:image:width" content="1393">
+<meta name="twitter:title" content="Detectors Inherit the Systems That Label Them – Q’s Blog">
+<meta name="twitter:description" content="In adversarial systems, labels are produced by the detector.">
+<meta name="twitter:image" content="https://qianrongwu.com/posts/detectors-inherit/figure.png">
+<meta name="twitter:image-height" content="714">
+<meta name="twitter:image-width" content="1393">
+<meta name="twitter:card" content="summary_large_image">
 </head>
 
-<body class="nav-fixed fullcontent quarto-light">
+<body class="nav-fixed quarto-light">
 
 <div id="quarto-search-results"></div>
   <header id="quarto-header" class="headroom fixed-top quarto-banner">
@@ -88,7 +129,7 @@ ul.task-list li input[type="checkbox"] {
       <div class="navbar-container container-fluid">
       <div class="navbar-brand-container mx-auto">
     <a class="navbar-brand" href="../../index.html">
-    <span class="navbar-title">qianrongwu-site</span>
+    <span class="navbar-title">Q’s Blog</span>
     </a>
   </div>
             <div id="quarto-search" class="" title="Search"></div>
@@ -101,13 +142,17 @@ ul.task-list li input[type="checkbox"] {
     <a class="nav-link" href="../../about.html"> 
 <span class="menu-text">About</span></a>
   </li>  
+  <li class="nav-item">
+    <a class="nav-link" href="../../research.qmd"> 
+<span class="menu-text">Research</span></a>
+  </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="https://github.com/"> <i class="bi bi-github" role="img">
+    <a class="nav-link" href="https://github.com/qianrongwu"> <i class="bi bi-github" role="img">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
   <li class="nav-item compact">
-    <a class="nav-link" href="https://bsky.app/"> <i class="bi bi-bluesky" role="img">
+    <a class="nav-link" href="../../index.xml"> <i class="bi bi-rss" role="img">
 </i> 
 <span class="menu-text"></span></a>
   </li>  
@@ -122,11 +167,17 @@ ul.task-list li input[type="checkbox"] {
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
     <div class="quarto-title column-body">
-      <h1 class="title">Post With Code</h1>
-                                <div class="quarto-categories">
-                <div class="quarto-category">news</div>
-                <div class="quarto-category">code</div>
-                <div class="quarto-category">analysis</div>
+      <h1 class="title">Detectors Inherit the Systems That Label Them</h1>
+                  <div>
+        <div class="description">
+          In adversarial systems, labels are produced by the detector.
+        </div>
+      </div>
+                          <div class="quarto-categories">
+                <div class="quarto-category">detection</div>
+                <div class="quarto-category">training-data</div>
+                <div class="quarto-category">security-ml</div>
+                <div class="quarto-category">label</div>
               </div>
                   </div>
   </div>
@@ -134,17 +185,11 @@ ul.task-list li input[type="checkbox"] {
   
   <div class="quarto-title-meta">
 
-      <div>
-      <div class="quarto-title-meta-heading">Author</div>
-      <div class="quarto-title-meta-contents">
-               <p>Harlow Malloc </p>
-            </div>
-    </div>
       
       <div>
       <div class="quarto-title-meta-heading">Published</div>
       <div class="quarto-title-meta-contents">
-        <p class="date">August 29, 2026</p>
+        <p class="date">August 30, 2026</p>
       </div>
     </div>
     
@@ -155,7 +200,21 @@ ul.task-list li input[type="checkbox"] {
   </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">On this page</h2>
+   
+  <ul>
+  <li><a href="#labels-are-selectively-observed" id="toc-labels-are-selectively-observed" class="nav-link active" data-scroll-target="#labels-are-selectively-observed">Labels are selectively observed</a></li>
+  <li><a href="#the-same-model-can-appear-to-have-very-different-recall" id="toc-the-same-model-can-appear-to-have-very-different-recall" class="nav-link" data-scroll-target="#the-same-model-can-appear-to-have-very-different-recall">The same model can appear to have very different recall</a></li>
+  <li><a href="#why-this-affects-training-not-just-metrics" id="toc-why-this-affects-training-not-just-metrics" class="nav-link" data-scroll-target="#why-this-affects-training-not-just-metrics">Why this affects training, not just metrics</a></li>
+  <li><a href="#breaking-the-feedback-loop" id="toc-breaking-the-feedback-loop" class="nav-link" data-scroll-target="#breaking-the-feedback-loop">Breaking the feedback loop</a></li>
+  <li><a href="#a-second-feedback-path-exposing-the-model-score-to-the-labeler" id="toc-a-second-feedback-path-exposing-the-model-score-to-the-labeler" class="nav-link" data-scroll-target="#a-second-feedback-path-exposing-the-model-score-to-the-labeler">A second feedback path: exposing the model score to the labeler</a></li>
+  <li><a href="#what-i-would-do-in-practice" id="toc-what-i-would-do-in-practice" class="nav-link" data-scroll-target="#what-i-would-do-in-practice">What I would do in practice</a></li>
+  <li><a href="#simulator" id="toc-simulator" class="nav-link" data-scroll-target="#simulator">Simulator</a></li>
+  </ul>
+</nav>
+    </div>
 <!-- main -->
 <main class="content quarto-banner-title-block" id="quarto-document-content">
 
@@ -163,9 +222,217 @@ ul.task-list li input[type="checkbox"] {
 
 
 
-<p>This is a post with executable code.</p>
+<p>Detection models are usually trained on historical labels.</p>
+<p>In adversarial systems, those labels are rarely neutral.</p>
+<p>Consider account takeover detection. A login attempt may become a confirmed positive because the existing system challenged it, the challenge failed, the user later recovered the account, or support confirmed the compromise.</p>
+<p>But what about an attack the existing detector never noticed?</p>
+<p>Often, nothing happens. No challenge, no review, no recovery signal. The event remains unlabeled—or worse, is treated as negative.</p>
+<p>This creates a simple but important problem:</p>
+<blockquote class="blockquote">
+<p>The system deciding what to inspect is also shaping the data used to train its successor.</p>
+</blockquote>
+<p>The result is a feedback loop: detectors tend to inherit the blind spots of the systems that generated their labels.</p>
+<section id="labels-are-selectively-observed" class="level2">
+<h2 class="anchored" data-anchor-id="labels-are-selectively-observed">Labels are selectively observed</h2>
+<p>Let <span class="math inline">\(Y\)</span> denote whether an event is truly malicious and <span class="math inline">\(S\)</span> whether the existing system selects it for inspection.</p>
+<p>In many production pipelines, we observe <span class="math inline">\(Y\)</span> reliably only when <span class="math inline">\(S = 1\)</span>.</p>
+<p>The problem is that selection is not random:</p>
+<p><span class="math display">\[P(S = 1 \mid X, Y) \neq P(S = 1)\]</span></p>
+<p>The incumbent detector selects examples using features <span class="math inline">\(X\)</span> that are themselves correlated with maliciousness.</p>
+<p>So the missing labels are <strong>missing not at random</strong>.</p>
+<p>This matters even if the labeling process after selection is perfect.</p>
+<p>Imagine two kinds of account takeover:</p>
+<ul>
+<li><strong>Loud attacks:</strong> high velocity, repeated IPs, obvious automation.</li>
+<li><strong>Quiet attacks:</strong> low velocity, novel devices, unusual geography, but otherwise normal behavior.</li>
+</ul>
+<p>Suppose the incumbent detector was built mostly around velocity. In a simulation, it catches:</p>
+<ul>
+<li><strong>88.7%</strong> of loud attacks</li>
+<li><strong>6.4%</strong> of quiet attacks</li>
+</ul>
+<p>There are 15,831 true attacks in total.</p>
+<p>Only 8,552 become observed positives. The remaining <strong>7,279 attacks are never surfaced by the incumbent and therefore look benign in the training data.</strong></p>
+<p>That is already enough to distort evaluation.</p>
+</section>
+<section id="the-same-model-can-appear-to-have-very-different-recall" class="level2">
+<h2 class="anchored" data-anchor-id="the-same-model-can-appear-to-have-very-different-recall">The same model can appear to have very different recall</h2>
+<p>Suppose a candidate model has true recall of <strong>57.2%</strong>.</p>
+<p>Evaluate it using the production labels generated above, and estimated recall becomes:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>estimator</th>
+<th>estimated recall</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>existing warehouse labels</td>
+<td>78.0%</td>
+</tr>
+<tr class="even">
+<td>sampled holdout, unweighted</td>
+<td>45.4%</td>
+</tr>
+<tr class="odd">
+<td>sampled holdout, weighted</td>
+<td>56.4%</td>
+</tr>
+<tr class="even">
+<td>true recall</td>
+<td>57.2%</td>
+</tr>
+</tbody>
+</table>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figure.png" class="img-fluid figure-img"></p>
+<figcaption>Three estimates of the same model’s recall. The dashed line is the truth; the whisker is a bootstrap interval on the weighted estimate.</figcaption>
+</figure>
+</div>
+<p>The first estimate is not merely noisy. It is systematically optimistic.</p>
+<p>Its denominator is effectively:</p>
+<blockquote class="blockquote">
+<p>attacks the existing system already knows how to find</p>
+</blockquote>
+<p>rather than:</p>
+<blockquote class="blockquote">
+<p>all attacks</p>
+</blockquote>
+<p>More production traffic does not fix this. With enough data, the biased estimate simply becomes more precise.</p>
+</section>
+<section id="why-this-affects-training-not-just-metrics" class="level2">
+<h2 class="anchored" data-anchor-id="why-this-affects-training-not-just-metrics">Why this affects training, not just metrics</h2>
+<p>If this only corrupted a dashboard, we could add a warning label and move on.</p>
+<p>But the same data is usually used for training.</p>
+<p>The model sees detected attacks as positives and many undetected attacks as negatives. It therefore learns a decision boundary that resembles the incumbent detector.</p>
+<p>In the same simulation, the candidate model detects:</p>
+<ul>
+<li><strong>79.5%</strong> of loud attacks</li>
+<li><strong>30.0%</strong> of quiet attacks</li>
+</ul>
+<p>Yet evaluation against incumbent-generated labels largely hides this difference.</p>
+<p>After deployment, the new model determines which examples become visible in the next round of data.</p>
+<p>The loop becomes:</p>
+<p><span class="math display">\[\text{detector} \rightarrow \text{selection} \rightarrow \text{labels} \rightarrow \text{next detector}\]</span></p>
+<p>Without an independent source of labels, blind spots can persist across model generations.</p>
+</section>
+<section id="breaking-the-feedback-loop" class="level2">
+<h2 class="anchored" data-anchor-id="breaking-the-feedback-loop">Breaking the feedback loop</h2>
+<p>The cleanest solution is conceptually simple:</p>
+<blockquote class="blockquote">
+<p>Randomly observe a small amount of traffic independently of the detector.</p>
+</blockquote>
+<p>For that traffic, allow downstream outcomes or manual investigation to establish the label.</p>
+<p>This produces a sample in which label availability is determined by a known sampling policy rather than by the incumbent detector.</p>
+<p>In security systems, uniform sampling is often impractical. Allowing high-risk traffic through is more expensive than allowing low-risk traffic through.</p>
+<p>So suppose we sample different risk groups at different rates.</p>
+<p>Then a plain average over the holdout is still biased, because its attack mix no longer matches the population’s. In the simulation that error is about the same size as the one we just removed, pointing the other way.</p>
+<p>Record the inclusion probability <span class="math inline">\(p_i\)</span> for every sampled event and define</p>
+<p><span class="math display">\[w_i = \frac{1}{p_i}.\]</span></p>
+<p>Then estimate recall with</p>
+<p><span class="math display">\[\widehat{R} = \frac{\sum_{i \in H} w_i \, \text{pred}_i \, Y_i}{\sum_{i \in H} w_i \, Y_i}.\]</span></p>
+<p>This is inverse-probability weighting, or a Horvitz–Thompson style estimator.</p>
+<p>The important part is that <span class="math inline">\(p_i\)</span> <strong>is known because we chose it.</strong></p>
+<p>We are correcting for a sampling decision we control, rather than trying to model an unknown adversarial selection mechanism after the fact.</p>
+<p>In the simulation:</p>
+<ul>
+<li>unweighted holdout recall: <strong>45.4%</strong></li>
+<li>weighted holdout recall: <strong>56.4%</strong></li>
+<li>true recall: <strong>57.2%</strong></li>
+</ul>
+<p>The tradeoff is variance. Small sampling probabilities create large weights, which widen confidence intervals.</p>
+<p>So the practical design problem becomes:</p>
+<blockquote class="blockquote">
+<p>How much unbiased measurement can we afford?</p>
+</blockquote>
+<p>That is a much healthier problem than unknowingly optimizing against biased labels.</p>
+<p>It is also not only a statistical question. On a platform serving young users, holdout exposure has to be capped, guardrailed, and reviewed, and those limits bind before the variance calculation does.</p>
+</section>
+<section id="a-second-feedback-path-exposing-the-model-score-to-the-labeler" class="level2">
+<h2 class="anchored" data-anchor-id="a-second-feedback-path-exposing-the-model-score-to-the-labeler">A second feedback path: exposing the model score to the labeler</h2>
+<p>There is another, easier-to-fix source of dependence.</p>
+<p>Suppose an LLM or human annotator receives a rich case summary:</p>
+<ul>
+<li>device history</li>
+<li>IP reputation</li>
+<li>account graph</li>
+<li>post-login activity</li>
+<li>geolocation</li>
+</ul>
+<p>and also receives the incumbent model’s risk score.</p>
+<p>The score is informative, so including it seems reasonable.</p>
+<p>But now the labeler is no longer independent of the detector being evaluated.</p>
+<p>In a simulation, exposing the score increases agreement with the incumbent:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th></th>
+<th>score hidden</th>
+<th>score exposed</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>agreement with incumbent</td>
+<td>84.3%</td>
+<td>88.7%</td>
+</tr>
+<tr class="even">
+<td>recall vs.&nbsp;truth</td>
+<td>73.5%</td>
+<td>69.4%</td>
+</tr>
+<tr class="odd">
+<td>recall on loud attacks</td>
+<td>92.7%</td>
+<td>93.9%</td>
+</tr>
+<tr class="even">
+<td>recall on quiet attacks</td>
+<td>35.4%</td>
+<td>20.8%</td>
+</tr>
+</tbody>
+</table>
+<p>Agreement improves.</p>
+<p>Actual coverage gets worse.</p>
+<p>The largest loss appears exactly where independent labeling is most valuable: attacks the incumbent already struggles to detect.</p>
+<p>This is not a failure of a poorly built model. It is what a careful reasoner does with an authoritative-looking number in front of it, which is why using a stronger model does not remove the effect.</p>
+<p>This also shows why <strong>human–LLM agreement alone is not enough to validate a labeler</strong>.</p>
+<p>Two labelers can agree because they share the same source of bias.</p>
+<p>The simulation makes that concrete. Measured on the incumbent-selected sample, the annotator agrees with the human labeler 88.0% of the time. Measured on the independent holdout, 87.9%. Its actual recall against truth across those two samples is 93.1% and 73.5%.</p>
+<p>Agreement does not move. The quantity it stands in for moves by a fifth.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="figure_labelers.png" class="img-fluid figure-img"></p>
+<figcaption>Left: agreement holds steady across two samples while recall against truth does not. Center and right: exposing the incumbent score buys agreement with the incumbent and pays for it in the quiet segment.</figcaption>
+</figure>
+</div>
+<p>If the goal is independent evidence, hide the incumbent score.</p>
+</section>
+<section id="what-i-would-do-in-practice" class="level2">
+<h2 class="anchored" data-anchor-id="what-i-would-do-in-practice">What I would do in practice</h2>
+<p>For a production detection system, I would start with four things.</p>
+<p><strong>1. Document label provenance.</strong> For every positive label, record why it exists: which enforcement action surfaced it, which downstream signal confirmed it, and what had to happen for the event to become observable.</p>
+<p><strong>2. Measure performance by attack segment.</strong> Aggregate recall can hide large coverage gaps. If the dataset cannot support meaningful segmentation, that itself is useful evidence about label coverage.</p>
+<p><strong>3. Create a small independent holdout.</strong> Stratify it, cap exposure, add safety guardrails, and log the inclusion probability for every sampled event.</p>
+<p><strong>4. Keep incumbent scores out of independent labeling.</strong> Especially when using LLM-assisted review. The purpose of an independent labeler is to add information, not reproduce the current model’s belief.</p>
+<p>None of these requires a more sophisticated detector.</p>
+<p>They require treating <strong>label generation as part of the ML system</strong>.</p>
+</section>
+<section id="simulator" class="level2">
+<h2 class="anchored" data-anchor-id="simulator">Simulator</h2>
+<p>The examples above are synthetic because production data rarely contains the latent truth needed to measure this bias directly.</p>
+<p>I built a small simulator that makes the full data-generating process observable:</p>
+<p><a href="https://github.com/qianrongwu/labels-are-estimators">github.com/qianrongwu/labels-are-estimators</a></p>
+<p>It runs in about thirty seconds. The knobs worth turning are in <code>Config</code>.</p>
+<p>Push the two holdout rates apart and watch the weighted estimate stay centered while its interval widens.</p>
+<p>Raise the share of quiet attacks and watch the warehouse-label estimate grow more confident as it grows more wrong.</p>
 
 
+</section>
 
 </main> <!-- /main -->
 <script id="quarto-html-after-body" type="application/javascript">
@@ -241,7 +508,7 @@ ul.task-list li input[type="checkbox"] {
     }
       var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
       var mailtoRegex = new RegExp(/^mailto:/);
-        var filterRegex = new RegExp("https:\/\/your-website-url\.example\.com");
+        var filterRegex = new RegExp("https:\/\/qianrongwu\.com");
       var isInternal = (href) => {
           return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
       }
