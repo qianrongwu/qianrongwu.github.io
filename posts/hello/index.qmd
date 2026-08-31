@@ -1,7 +1,0 @@
----
-title: "Test post"
-date: 2026-08-29
-draft: false
----
-
-Pipeline check.

@@ -1,5 +1,5 @@
 ---
-title: "qianrongwu-site"
+title: "Welcome to Q's blog!"
 listing:
   contents: posts
   feed: true
