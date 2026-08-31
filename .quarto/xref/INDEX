@@ -13,5 +13,11 @@
   },
   "posts/hello/index.qmd": {
     "index.html": "ac8d93e4"
+  },
+  "posts/labels-are-estimators/index.qmd": {
+    "index.html": "d06e2668"
+  },
+  "posts/detectors-inherit/index.qmd": {
+    "index.html": "5596d096"
   }
 }

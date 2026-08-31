@@ -5,7 +5,7 @@ project:
     - CNAME
 
 website:
-  title: "Qianrong Wu"
+  title: "Q's Blog"
   site-url: "https://qianrongwu.com"
   description: "Measurement science for trust and safety."
   open-graph: true
@@ -17,7 +17,7 @@ website:
       - text: Research
         href: research.qmd
       - icon: github
-        href: https://github.com/<你的用户名>
+        href: https://github.com/qianrongwu
       - icon: rss
         href: index.xml
 

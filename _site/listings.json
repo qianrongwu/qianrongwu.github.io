@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/detectors-inherit/index.html",
       "/posts/hello/index.html"
     ]
   }
