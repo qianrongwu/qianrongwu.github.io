@@ -4,7 +4,14 @@
     "href": "about.html",
     "title": "About",
     "section": "",
-    "text": "About this blog"
+    "text": "Hi, I’m Qianrong Wu, and most people call me Q.\nI’m a machine learning engineer at Roblox, working on problems at the intersection of machine learning, security, and large-scale systems."
+  },
+  {
+    "objectID": "about.html#about-this-blog",
+    "href": "about.html#about-this-blog",
+    "title": "About",
+    "section": "About this blog",
+    "text": "About this blog\nThis is where I write down what I’m learning and thinking about, mostly machine learning, AI, and systems. Writing helps me organize my thoughts and understand things better.\nCorrections are always welcome — you can find me on LinkedIn.\nOpinions here are my own."
   },
   {
     "objectID": "posts/detectors-inherit/index.html",
