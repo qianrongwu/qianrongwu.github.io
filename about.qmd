@@ -9,11 +9,21 @@ about:
       href: https://bsky.app/
     - icon: linkedin
       text: LinkedIn
-      href: https://linkedin.com
+      href: https://www.linkedin.com/in/qianrongwu/
     - icon: github
       text: Github
-      href: https://github.com
+      href: https://github.com/qianrongwu
 
 ---
 
-About this blog
+Hi, I'm Qianrong Wu, and most people call me Q.
+
+I'm a machine learning engineer at Roblox, working on problems at the intersection of machine learning, security, and large-scale systems.
+
+## About this blog
+
+This is where I write down what I'm learning and thinking about, mostly machine learning, AI, and systems. Writing helps me organize my thoughts and understand things better.
+
+Corrections are always welcome — you can find me on [LinkedIn](https://www.linkedin.com/in/qianrongwu/).
+
+Opinions here are my own.
