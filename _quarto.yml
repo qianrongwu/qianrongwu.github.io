@@ -7,19 +7,12 @@ project:
 website:
   title: "Q's Blog"
   site-url: "https://qianrongwu.com"
-  description: "Measurement science for trust and safety."
   open-graph: true
   twitter-card: true
   navbar:
     right:
       - text: About
         href: about.qmd
-      - text: Research
-        href: research.qmd
-      - icon: github
-        href: https://github.com/qianrongwu
-      - icon: rss
-        href: index.xml
 
 format:
   html:
