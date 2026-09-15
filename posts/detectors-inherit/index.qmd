@@ -5,6 +5,8 @@ date: 2026-08-30
 date-modified: 2026-09-14
 categories: [detection, training-data, security-ml, label]
 image: figure.png
+resources:
+  - figure_labelers.png
 toc: true
 toc-title: "In this article"
 toc-depth: 2
