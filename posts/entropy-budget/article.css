@@ -1,0 +1,11 @@
+/* Keep wide comparisons and equations inside the article on small screens. */
+#the-map-separate-the-choices .table-responsive > table {
+  min-width: 42rem;
+}
+
+#quarto-document-content .math.display {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  padding-block: 0.25rem;
+}

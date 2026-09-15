@@ -1,0 +1,846 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-08-31">
+<meta name="description" content="A practical map of how GRPO-family methods estimate advantages, constrain policy updates, and balance reward improvement with continued exploration.">
+
+<title>Entropy as a Budget: A Map of GRPO, DAPO, and GSPO – Q’s Blog</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-445b8638c3d06994fee0907d791121c4.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="article.css">
+<meta property="og:title" content="Entropy as a Budget: A Map of GRPO, DAPO, and GSPO – Q’s Blog">
+<meta property="og:description" content="A practical map of how GRPO-family methods estimate advantages, constrain policy updates, and balance reward improvement with continued exploration.">
+<meta property="og:site_name" content="Q’s Blog">
+<meta name="twitter:title" content="Entropy as a Budget: A Map of GRPO, DAPO, and GSPO – Q’s Blog">
+<meta name="twitter:description" content="A practical map of how GRPO-family methods estimate advantages, constrain policy updates, and balance reward improvement with continued exploration.">
+<meta name="twitter:card" content="summary">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Q’s Blog</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Entropy as a Budget: A Map of GRPO, DAPO, and GSPO</h1>
+                  <div>
+        <div class="description">
+          A practical map of how GRPO-family methods estimate advantages, constrain policy updates, and balance reward improvement with continued exploration.
+        </div>
+      </div>
+                          <div class="quarto-categories">
+                <div class="quarto-category">reinforcement-learning</div>
+                <div class="quarto-category">llm</div>
+                <div class="quarto-category">post-training</div>
+                <div class="quarto-category">grpo</div>
+                <div class="quarto-category">gspo</div>
+                <div class="quarto-category">dapo</div>
+                <div class="quarto-category">entropy</div>
+              </div>
+                  </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">August 31, 2026</p>
+      </div>
+    </div>
+    
+      <div>
+      <div class="quarto-title-meta-heading">Modified</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date-modified">September 14, 2026</p>
+      </div>
+    </div>
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">In this article</h2>
+   
+  <ul class="collapse">
+  <li><a href="#setup-a-reward-for-the-whole-response" id="toc-setup-a-reward-for-the-whole-response" class="nav-link active" data-scroll-target="#setup-a-reward-for-the-whole-response">Setup: a reward for the whole response</a></li>
+  <li><a href="#ppo-and-grpo-changing-the-baseline" id="toc-ppo-and-grpo-changing-the-baseline" class="nav-link" data-scroll-target="#ppo-and-grpo-changing-the-baseline">PPO and GRPO: changing the baseline</a></li>
+  <li><a href="#entropy-measurement-and-dynamics" id="toc-entropy-measurement-and-dynamics" class="nav-link" data-scroll-target="#entropy-measurement-and-dynamics">Entropy: measurement and dynamics</a></li>
+  <li><a href="#dapo-several-practical-interventions" id="toc-dapo-several-practical-interventions" class="nav-link" data-scroll-target="#dapo-several-practical-interventions">DAPO: several practical interventions</a></li>
+  <li><a href="#gspo-one-ratio-weight-per-response" id="toc-gspo-one-ratio-weight-per-response" class="nav-link" data-scroll-target="#gspo-one-ratio-weight-per-response">GSPO: one ratio weight per response</a></li>
+  <li><a href="#the-map-separate-the-choices" id="toc-the-map-separate-the-choices" class="nav-link" data-scroll-target="#the-map-separate-the-choices">The map: separate the choices</a></li>
+  <li><a href="#why-pass1-is-not-enough" id="toc-why-pass1-is-not-enough" class="nav-link" data-scroll-target="#why-pass1-is-not-enough">Why pass@1 is not enough</a></li>
+  <li><a href="#a-systems-caveat-which-policy-generated-the-data" id="toc-a-systems-caveat-which-policy-generated-the-data" class="nav-link" data-scroll-target="#a-systems-caveat-which-policy-generated-the-data">A systems caveat: which policy generated the data?</a></li>
+  <li><a href="#implications-for-agents" id="toc-implications-for-agents" class="nav-link" data-scroll-target="#implications-for-agents">Implications for agents</a></li>
+  <li><a href="#evaluating-the-trade-offs" id="toc-evaluating-the-trade-offs" class="nav-link" data-scroll-target="#evaluating-the-trade-offs">Evaluating the trade-offs</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+
+<p>A rising reward curve can coincide with a narrowing search process. A model may produce successful answers more reliably while alternative solutions become harder to sample. Evaluating this trade-off requires measures of both task performance and exploration.</p>
+<p>PPO, GRPO, DAPO, and GSPO can be compared along two dimensions:</p>
+<ol type="1">
+<li><strong>How does the algorithm keep policy updates stable?</strong></li>
+<li><strong>How does it preserve enough useful exploration for learning to continue?</strong></li>
+</ol>
+<p>These questions interact, but the methods answer them differently. GRPO changes advantage estimation. DAPO changes clipping, sampling, loss normalization, and length handling. GSPO changes the granularity of the likelihood ratio and clipping.</p>
+<p>The budget metaphor describes the risk that rapid concentration of probability leaves fewer alternatives available for learning. Entropy can increase, however, and random output can have high entropy. Its relevance to exploration depends on whether the policy continues to reach useful behaviors.</p>
+<section id="setup-a-reward-for-the-whole-response" class="level2">
+<h2 class="anchored" data-anchor-id="setup-a-reward-for-the-whole-response">Setup: a reward for the whole response</h2>
+<p>Consider outcome-supervised RL with verifiable rewards, or RLVR. Given a prompt <span class="math inline">\(x\)</span>, a policy <span class="math inline">\(\pi_\theta\)</span> samples a response <span class="math inline">\(y=(y_1,\ldots,y_T)\)</span>, and a verifier returns <span class="math inline">\(R(x,y)\)</span>. Here the reward arrives at the end; verifiability itself does not require rewards to have that granularity.</p>
+<p>The objective is</p>
+<p><span class="math display">\[
+J(\theta)=\mathbb{E}_{x\sim\mathcal D,\,y\sim\pi_\theta(\cdot\mid x)}[R(x,y)].
+\]</span></p>
+<p>A typical training loop collects responses with <span class="math inline">\(\pi_{\mathrm{old}}\)</span>, then updates the policy on that batch. Reusing it across updates introduces policy drift. The ratios below account for that drift within surrogate objectives; they do not make every such objective an exact off-policy estimator.</p>
+<p>The comparison separates four design choices: <strong>how rewards are assigned, how advantages are estimated, where ratios and clipping act, and how losses are averaged.</strong> These choices need not use the same unit.</p>
+</section>
+<section id="ppo-and-grpo-changing-the-baseline" class="level2">
+<h2 class="anchored" data-anchor-id="ppo-and-grpo-changing-the-baseline">PPO and GRPO: changing the baseline</h2>
+<p>In the usual LLM application of Proximal Policy Optimization (PPO), each generated token has a ratio</p>
+<p><span class="math display">\[
+r_{i,t}(\theta)=
+\frac{\pi_\theta(y_{i,t}\mid x,y_{i,&lt;t})}
+{\pi_{\mathrm{old}}(y_{i,t}\mid x,y_{i,&lt;t})},
+\]</span></p>
+<p>and contributes the clipped surrogate</p>
+<p><span class="math display">\[
+\ell(r,A)=\min\!\left(rA,\operatorname{clip}(r,1-\varepsilon,1+\varepsilon)A\right).
+\]</span></p>
+<p>A learned value function commonly supplies token advantages through generalized advantage estimation. PPO can also include an entropy bonus to encourage exploration. <a href="https://arxiv.org/abs/1707.06347v2">Schulman et al., 2017</a></p>
+<p>The critic can be expensive when implemented as another large model, and predicting the eventual reward from a partial proof is difficult. Its cost and accuracy depend on the implementation.</p>
+<p>Group Relative Policy Optimization (GRPO) replaces the learned critic with a baseline computed from sampled rewards. For each prompt, sample <span class="math inline">\(G\)</span> responses and compare their rewards:</p>
+<p><span class="math display">\[
+A_i=\frac{R_i-\bar R}{\sigma_R+\delta},
+\qquad
+\bar R=\frac{1}{G}\sum_{j=1}^{G}R_j,
+\]</span></p>
+<p>where <span class="math inline">\(\sigma_R\)</span> is the group reward standard deviation and <span class="math inline">\(\delta&gt;0\)</span> guards against division by zero. In this outcome-supervised version, the same <span class="math inline">\(A_i\)</span> is used for every token in response <span class="math inline">\(i\)</span>. The original objective retains token ratios and clipping, averages tokens within each response, and includes a Kullback–Leibler (KL) divergence penalty relative to a reference policy. <a href="https://arxiv.org/html/2402.03300v3#S4.SS1">DeepSeekMath, §4.1</a></p>
+<p>Removing the critic saves resources; the total memory saving depends on the training stack. The group mean is a sampled baseline, not the exact expected reward for that prompt. GRPO was subsequently used in DeepSeek-R1’s RL training. <a href="https://arxiv.org/abs/2501.12948v1">DeepSeek-R1</a></p>
+<p>A sequence-level reward can naturally weight token gradients. The score-function identity gives</p>
+<p><span class="math display">\[
+\nabla_\theta\log\pi_\theta(y\mid x)
+=\sum_t\nabla_\theta\log\pi_\theta(y_t\mid x,y_{&lt;t}).
+\]</span></p>
+<p>Thus a sequence reward naturally weights a sum of token gradients in an on-policy policy-gradient estimator. What later methods reconsider is how those gradients are <strong>reweighted and clipped as the policy changes</strong>, and how responses of different lengths contribute to the update.</p>
+</section>
+<section id="entropy-measurement-and-dynamics" class="level2">
+<h2 class="anchored" data-anchor-id="entropy-measurement-and-dynamics">Entropy: measurement and dynamics</h2>
+<p>At a prefix <span class="math inline">\(s=(x,y_{&lt;t})\)</span>, the policy’s conditional entropy is</p>
+<p><span class="math display">\[
+h_\theta(s)=-\sum_{v\in\mathcal V}\pi_\theta(v\mid s)\log\pi_\theta(v\mid s).
+\]</span></p>
+<p>A training dashboard usually averages a quantity like this over sampled prefixes. Write that as <span class="math inline">\(H_d(\pi_\theta)=\mathbb E_{s\sim d}[h_\theta(s)]\)</span>, where <span class="math inline">\(d\)</span> specifies the prefixes and their weights. Prompt selection, decoding settings, and token-versus-response averaging matter when comparing runs.</p>
+<p>This measures uncertainty over tokens. It does not directly count distinct algorithms, useful tool strategies, or solvable problems. A model can vary its wording while repeating the same failed approach.</p>
+<p>Cui et al.&nbsp;observe rapid entropy loss followed by performance saturation in their studied runs, and fit the relationship</p>
+<p><span class="math display">\[
+R_{\mathrm{val}}\approx-ae^H+b.
+\]</span></p>
+<p>Early observations predict later performance in their experiments. The authors also explicitly discuss settings with different entropy dynamics. The fitted endpoint <span class="math inline">\(b-a\)</span> is therefore a conditional extrapolation, not a universal ceiling on what RL can learn. <a href="https://arxiv.org/html/2505.22617v1#S2.SS4">Cui et al., §§2.4–2.6</a></p>
+<p>For an intuition about the direction of entropy change, consider a deliberately simple update at one fixed prefix. Hold advantage scores <span class="math inline">\(A(v)\)</span> fixed and reweight probabilities as</p>
+<p><span class="math display">\[
+p_\eta(v)=\frac{p(v)e^{\eta A(v)}}{\sum_u p(u)e^{\eta A(u)}}.
+\]</span></p>
+<p>Differentiating its entropy at <span class="math inline">\(\eta=0\)</span> gives</p>
+<p><span class="math display">\[
+\left.\frac{dH(p_\eta)}{d\eta}\right|_{\eta=0}
+=-\operatorname{Cov}_{v\sim p}\!\left(\log p(v),A(v)\right).
+\]</span></p>
+<p>If already-probable actions tend to receive higher advantages, this update reduces entropy. If rare actions receive higher advantages, it can increase entropy. The sign depends on what is rewarded.</p>
+<p>This calculation describes an idealized multiplicative update at a fixed prefix. Cui et al.’s tabular analysis distinguishes vanilla policy gradient, involving <span class="math inline">\(\operatorname{Cov}(\log\pi,\pi A)\)</span>, from natural policy gradient, involving <span class="math inline">\(\operatorname{Cov}(\log\pi,A)\)</span>. The observed tendency toward positive covariance does not imply monotonic entropy decline for every optimizer and training recipe. <a href="https://arxiv.org/html/2505.22617v1#S3">Cui et al., §3</a></p>
+<p>The same work introduces Clip-Cov and KL-Cov, which target selected tokens’ contributions through gradient suppression or KL regularization. These methods explicitly address entropy dynamics. <a href="https://arxiv.org/html/2505.22617v1#S4">Cui et al., §4</a></p>
+<p>Reinforcement can therefore concentrate probability on strategies that already work, making alternatives harder to encounter. For the exploration objective discussed here, entropy increases matter when they improve access to useful behaviors.</p>
+</section>
+<section id="dapo-several-practical-interventions" class="level2">
+<h2 class="anchored" data-anchor-id="dapo-several-practical-interventions">DAPO: several practical interventions</h2>
+<p>Decoupled Clip and Dynamic Sampling Policy Optimization (DAPO) addresses several observed failure modes in GRPO-style training. It retains token ratios and introduces four changes:</p>
+<ul>
+<li><strong>Clip-Higher:</strong> separate lower and upper clipping widths; the reported setting uses <span class="math inline">\(\varepsilon_{\mathrm{low}}=0.2\)</span> and <span class="math inline">\(\varepsilon_{\mathrm{high}}=0.28\)</span>.</li>
+<li><strong>Dynamic Sampling:</strong> filter groups with no correctness variation and sample more until the informative batch is filled. This improves the learning signal per update, while requiring additional sampling.</li>
+<li><strong>Token-level loss:</strong> average over tokens, giving longer responses more total weight than per-response averaging does.</li>
+<li><strong>Overlong reward shaping:</strong> the paper evaluates masking truncated samples’ losses and introduces a soft length penalty near the generation limit to reduce truncation-related reward noise.</li>
+</ul>
+<p>DAPO also removes the reference-policy KL term. Its Clip-Higher ablation shows higher policy entropy and more diverse samples. <a href="https://arxiv.org/html/2503.14476v2#S3">Yu et al., §§2.3–3.4</a></p>
+<p>The effect of the upper clipping threshold depends on the token’s initial probability. With an upper ratio of <span class="math inline">\(1.2\)</span>, a positively advantaged token starting at probability <span class="math inline">\(0.01\)</span> reaches the surrogate’s flat region at <span class="math inline">\(0.012\)</span>. A token starting at <span class="math inline">\(0.9\)</span> cannot reach the corresponding <span class="math inline">\(1.08\)</span> boundary. The same relative threshold leaves very different room for absolute probability growth.</p>
+<p>Clipping does not enforce a hard probability cap: other samples and shared parameters can still move a clipped token’s probability. Nor is every rare token a useful exploration step. Clip-Higher gives rewarded rare tokens more room; it does not identify why a response succeeded.</p>
+<p>The paper reports 50% on AIME 2024 with Qwen2.5-32B, averaging accuracy over 32 repetitions. That is avg@32, not pass@32. Its reported reduction in update steps should not be read as an equal reduction in total compute. <a href="https://arxiv.org/html/2503.14476v2#S4">DAPO, §4</a></p>
+<p>These interventions address distinct issues: diversity, informative batches, length weighting, and reward noise. Clip-Higher directly targets the exploration concern; the other changes also affect how training data contributes to the update.</p>
+</section>
+<section id="gspo-one-ratio-weight-per-response" class="level2">
+<h2 class="anchored" data-anchor-id="gspo-one-ratio-weight-per-response">GSPO: one ratio weight per response</h2>
+<p>Group Sequence Policy Optimization (GSPO) changes the ratio and clipping unit. Let <span class="math inline">\(T_i=|y_i|\)</span>. The full sequence likelihood ratio is</p>
+<p><span class="math display">\[
+\rho_i(\theta)=\frac{\pi_\theta(y_i\mid x)}{\pi_{\mathrm{old}}(y_i\mid x)}
+=\prod_{t=1}^{T_i}r_{i,t}(\theta).
+\]</span></p>
+<p>GSPO instead uses its geometric mean,</p>
+<p><span class="math display">\[
+s_i(\theta)=\rho_i(\theta)^{1/T_i}
+=\exp\!\left(\frac{1}{T_i}\sum_{t=1}^{T_i}\log r_{i,t}(\theta)\right),
+\]</span></p>
+<p>and optimizes a clipped surrogate at the response level:</p>
+<p><span class="math display">\[
+\frac{1}{G}\sum_{i=1}^{G}
+\min\!\left(s_iA_i,
+\operatorname{clip}(s_i,1-\varepsilon_{\mathrm{low}},1+\varepsilon_{\mathrm{high}})A_i\right).
+\]</span></p>
+<p>Length normalization controls the scale of the weight, but <span class="math inline">\(s_i\)</span> is a surrogate weight: the exact change-of-measure ratio is <span class="math inline">\(\rho_i\)</span>. The paper uses much tighter clipping widths for this different quantity. <a href="https://arxiv.org/html/2507.18071v2#S4">Zheng et al., §§4–5</a></p>
+<p>Ignoring clipping, differentiating a response’s contribution gives</p>
+<p><span class="math display">\[
+\nabla_\theta(s_iA_i)
+=\frac{s_iA_i}{T_i}\sum_t\nabla_\theta\log\pi_\theta(y_{i,t}\mid x,y_{i,&lt;t}),
+\]</span></p>
+<p>with the sampled advantage held fixed. Every token score gradient receives the same response-level ratio weight. GRPO instead weights each one by its own token ratio.</p>
+<p>For positive <span class="math inline">\(A_i\)</span>, the surrogate becomes flat above the upper boundary; for negative <span class="math inline">\(A_i\)</span>, it becomes flat below the lower boundary. In those cases, that response contributes no policy-surrogate gradient. Being outside the interval in the opposite direction does not remove its gradient. Sequence clipping is therefore not simply an accept/reject rule for all out-of-range responses.</p>
+<p>The paper reports improved training stability and efficiency, including mixture-of-experts (MoE) training without Routing Replay, which reuses the old policy’s expert selections during updates. The reported roughly 10% change in activated experts concerns a particular Qwen3-30B-A3B setup, not a universal rate for every MoE token. <a href="https://arxiv.org/html/2507.18071v2#S5.SS3">GSPO, §5.3</a></p>
+<p>The paper does not establish an entropy-preservation result. Averaging log ratios also does not guarantee that local changes are small. For example, token ratios <span class="math inline">\(2\)</span> and <span class="math inline">\(1/2\)</span> produce <span class="math inline">\(s_i=1\)</span>: substantial opposing changes can cancel in the aggregate.</p>
+<p>GSPO’s effect on useful diversity requires separate evaluation from its gains in update stability. The shared response advantage still leaves token-level credit assignment unresolved.</p>
+</section>
+<section id="the-map-separate-the-choices" class="level2">
+<h2 class="anchored" data-anchor-id="the-map-separate-the-choices">The map: separate the choices</h2>
+<p>The table summarizes each algorithm’s advantage estimation, ratio and clipping unit, loss averaging, and main change. Implementations can combine these choices.</p>
+<div class="table-responsive" tabindex="0" role="region" aria-label="Algorithm comparison; scroll horizontally to view all columns">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Advantage in this setting</th>
+<th>Ratio / clipping unit</th>
+<th>Loss averaging</th>
+<th>Main change</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>PPO</td>
+<td>Usually critic-based, per token</td>
+<td>Token</td>
+<td>Implementation-dependent</td>
+<td>Constrain updates while using estimated advantages</td>
+</tr>
+<tr class="even">
+<td>GRPO</td>
+<td>Group-relative, per response</td>
+<td>Token</td>
+<td>Token mean within each response, then response mean</td>
+<td>Remove the learned critic</td>
+</tr>
+<tr class="odd">
+<td>DAPO</td>
+<td>Group-relative, per response</td>
+<td>Token, asymmetric bounds</td>
+<td>Mean over tokens</td>
+<td>Change clipping, sampling, length weighting, and reward handling</td>
+</tr>
+<tr class="even">
+<td>GSPO</td>
+<td>Group-relative, per response</td>
+<td>Response, length-normalized ratio</td>
+<td>Mean over response surrogates</td>
+<td>Share the ratio weight and clipping decision across a response</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Entropy is an outcome to measure; ratio granularity alone does not determine it. Reference KL, explicit entropy regularization, decoding, and batch construction also affect the behavior of a particular run.</p>
+</section>
+<section id="why-pass1-is-not-enough" class="level2">
+<h2 class="anchored" data-anchor-id="why-pass1-is-not-enough">Why pass@1 is not enough</h2>
+<p>Yue et al.&nbsp;find that, for the models and RLVR recipes they evaluate, gains at small sampling budgets can coexist with worse coverage at large budgets. Their later revision also tests matching the RL model’s output entropy to the base model’s by adjusting temperature; a pass@k gap remains. Reduced entropy alone does not explain the observed narrowing. <a href="https://arxiv.org/html/2504.13837v5#S4.SS5">Yue et al., §§3–4.5</a></p>
+<p>For a prompt with independent-sample success probability <span class="math inline">\(p_x\)</span>,</p>
+<p><span class="math display">\[
+\operatorname{pass@}k(x)=1-(1-p_x)^k.
+\]</span></p>
+<p>Across prompts, raising already-high success probabilities while lowering small ones can improve average pass@1 and reduce large-<span class="math inline">\(k\)</span> coverage. No capability has to become literally impossible to sample for this trade-off to matter in practice.</p>
+<p>Finite-<span class="math inline">\(k\)</span> measurements describe what is reachable under a sampling budget and evaluation protocol. They cannot prove that RL never learns a new reasoning behavior. ProRL, for example, reports gains at both low and high <span class="math inline">\(k\)</span> in some domains, starting from an already-distilled reasoning checkpoint and using a different training recipe. <a href="https://arxiv.org/html/2505.24864v1#S4.SS2">Liu et al., §4.2</a></p>
+<p>Pass@k also assumes a way to recognize a successful sample. It is not the accuracy of a system that must select an answer without a verifier.</p>
+<p>Evaluation should track both single-sample performance and coverage across several sampling budgets, with prompts and decoding settings controlled. Entropy adds context to those measurements. It does not replace them.</p>
+</section>
+<section id="a-systems-caveat-which-policy-generated-the-data" class="level2">
+<h2 class="anchored" data-anchor-id="a-systems-caveat-which-policy-generated-the-data">A systems caveat: which policy generated the data?</h2>
+<p>Policy drift is only one reason training and rollout probabilities can disagree. Different engines can assign different probabilities to the same tokens even with the same weights.</p>
+<p>Qi et al.&nbsp;find that switching both rollout inference and mixed-precision training from BF16 to FP16 substantially reduces this mismatch in their experiments. FP16 has 10 fraction bits versus BF16’s 7: eightfold finer spacing within the same normal exponent interval, with a narrower numerical range. This is mixed-precision training, not a prescription to cast every tensor to FP16. <a href="https://arxiv.org/html/2510.26788v1#S3">Qi et al., §§3–4</a></p>
+<p>In their filtered-MATH test with DeepSeek-R1-Distill-Qwen-1.5B, a simple importance-weighted policy-gradient method in FP16 outperforms BF16 baselines, and algorithm differences narrow under FP16. Broader experiments support the precision benefit, without establishing FP16 as universally preferable. <a href="https://arxiv.org/html/2510.26788v1#S4">Qi et al., §§4–6</a></p>
+<p>This distinction matters when interpreting likelihood ratios: changes caused by learning and disagreement introduced by training and sampling systems can both affect the measured ratio.</p>
+</section>
+<section id="implications-for-agents" class="level2">
+<h2 class="anchored" data-anchor-id="implications-for-agents">Implications for agents</h2>
+<p>Consider a coding agent with two possible strategies. One edits the obvious file immediately. Another first traces call sites and dependencies, sometimes finding the actual fault elsewhere. If the training distribution rewards the first strategy more consistently, the second could become harder to sample even when it would help on unfamiliar tasks.</p>
+<p>This is a behavioral hypothesis, not a result established by the benchmarks above. Testing it requires measuring variation in investigation strategies, tool use, and successful fixes, along with success under a fixed time or token budget. High token entropy could reflect productive investigation or random edits; it cannot distinguish them on its own.</p>
+<p>The relevant outcome is whether training preserves access to alternative strategies that succeed on tasks where the dominant strategy fails.</p>
+</section>
+<section id="evaluating-the-trade-offs" class="level2">
+<h2 class="anchored" data-anchor-id="evaluating-the-trade-offs">Evaluating the trade-offs</h2>
+<p>Evaluating a GRPO-family method requires identifying the change to the update, the failure mode it targets, and the measurements supporting its claims. For a training run, relevant diagnostics include reward, entropy, repeated-sampling coverage, response length, clipping behavior, and training–rollout agreement.</p>
+<p>Rapid concentration of probability can make useful alternatives harder to encounter. The budget metaphor highlights a measurable question: <strong>as reward improves, which useful behaviors become easier—or harder—to reach?</strong></p>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<ul>
+<li>Schulman et al., <em>Proximal Policy Optimization Algorithms</em>, 2017. <a href="https://arxiv.org/abs/1707.06347v2">arXiv:1707.06347v2</a></li>
+<li>Shao et al., <em>DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models</em>, 2024. <a href="https://arxiv.org/abs/2402.03300v3">arXiv:2402.03300v3</a></li>
+<li>DeepSeek-AI et al., <em>DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</em>, 2025. <a href="https://arxiv.org/abs/2501.12948v1">arXiv:2501.12948v1</a></li>
+<li>Yu et al., <em>DAPO: An Open-Source LLM Reinforcement Learning System at Scale</em>, 2025. <a href="https://arxiv.org/abs/2503.14476v2">arXiv:2503.14476v2</a></li>
+<li>Zheng et al., <em>Group Sequence Policy Optimization</em>, 2025. <a href="https://arxiv.org/abs/2507.18071v2">arXiv:2507.18071v2</a></li>
+<li>Cui et al., <em>The Entropy Mechanism of Reinforcement Learning for Reasoning Language Models</em>, 2025. <a href="https://arxiv.org/abs/2505.22617v1">arXiv:2505.22617v1</a></li>
+<li>Yue et al., <em>Does Reinforcement Learning Really Incentivize Reasoning Capacity in LLMs Beyond the Base Model?</em>, 2025. <a href="https://arxiv.org/abs/2504.13837v5">arXiv:2504.13837v5</a></li>
+<li>Liu et al., <em>ProRL: Prolonged Reinforcement Learning Expands Reasoning Boundaries in Large Language Models</em>, 2025. <a href="https://arxiv.org/abs/2505.24864v1">arXiv:2505.24864v1</a></li>
+<li>Qi et al., <em>Defeating the Training-Inference Mismatch via FP16</em>, 2025. <a href="https://arxiv.org/abs/2510.26788v1">arXiv:2510.26788v1</a></li>
+</ul>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/qianrongwu\.com");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

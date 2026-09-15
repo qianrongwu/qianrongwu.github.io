@@ -10,7 +10,209 @@
 <atom:link href="https://qianrongwu.com/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
 <generator>quarto-1.10.18</generator>
-<lastBuildDate>Sun, 30 Aug 2026 07:00:00 GMT</lastBuildDate>
+<lastBuildDate>Mon, 31 Aug 2026 07:00:00 GMT</lastBuildDate>
+<item>
+  <title>Entropy as a Budget: A Map of GRPO, DAPO, and GSPO</title>
+  <link>https://qianrongwu.com/posts/entropy-budget/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>A rising reward curve can coincide with a narrowing search process. A model may produce successful answers more reliably while alternative solutions become harder to sample. Evaluating this trade-off requires measures of both task performance and exploration.</p>
+<p>PPO, GRPO, DAPO, and GSPO can be compared along two dimensions:</p>
+<ol type="1">
+<li><strong>How does the algorithm keep policy updates stable?</strong></li>
+<li><strong>How does it preserve enough useful exploration for learning to continue?</strong></li>
+</ol>
+<p>These questions interact, but the methods answer them differently. GRPO changes advantage estimation. DAPO changes clipping, sampling, loss normalization, and length handling. GSPO changes the granularity of the likelihood ratio and clipping.</p>
+<p>The budget metaphor describes the risk that rapid concentration of probability leaves fewer alternatives available for learning. Entropy can increase, however, and random output can have high entropy. Its relevance to exploration depends on whether the policy continues to reach useful behaviors.</p>
+<section id="setup-a-reward-for-the-whole-response" class="level2">
+<h2 class="anchored" data-anchor-id="setup-a-reward-for-the-whole-response">Setup: a reward for the whole response</h2>
+<p>Consider outcome-supervised RL with verifiable rewards, or RLVR. Given a prompt <img src="https://latex.codecogs.com/png.latex?x">, a policy <img src="https://latex.codecogs.com/png.latex?%5Cpi_%5Ctheta"> samples a response <img src="https://latex.codecogs.com/png.latex?y=(y_1,%5Cldots,y_T)">, and a verifier returns <img src="https://latex.codecogs.com/png.latex?R(x,y)">. Here the reward arrives at the end; verifiability itself does not require rewards to have that granularity.</p>
+<p>The objective is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AJ(%5Ctheta)=%5Cmathbb%7BE%7D_%7Bx%5Csim%5Cmathcal%20D,%5C,y%5Csim%5Cpi_%5Ctheta(%5Ccdot%5Cmid%20x)%7D%5BR(x,y)%5D.%0A"></p>
+<p>A typical training loop collects responses with <img src="https://latex.codecogs.com/png.latex?%5Cpi_%7B%5Cmathrm%7Bold%7D%7D">, then updates the policy on that batch. Reusing it across updates introduces policy drift. The ratios below account for that drift within surrogate objectives; they do not make every such objective an exact off-policy estimator.</p>
+<p>The comparison separates four design choices: <strong>how rewards are assigned, how advantages are estimated, where ratios and clipping act, and how losses are averaged.</strong> These choices need not use the same unit.</p>
+</section>
+<section id="ppo-and-grpo-changing-the-baseline" class="level2">
+<h2 class="anchored" data-anchor-id="ppo-and-grpo-changing-the-baseline">PPO and GRPO: changing the baseline</h2>
+<p>In the usual LLM application of Proximal Policy Optimization (PPO), each generated token has a ratio</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Ar_%7Bi,t%7D(%5Ctheta)=%0A%5Cfrac%7B%5Cpi_%5Ctheta(y_%7Bi,t%7D%5Cmid%20x,y_%7Bi,%3Ct%7D)%7D%0A%7B%5Cpi_%7B%5Cmathrm%7Bold%7D%7D(y_%7Bi,t%7D%5Cmid%20x,y_%7Bi,%3Ct%7D)%7D,%0A"></p>
+<p>and contributes the clipped surrogate</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cell(r,A)=%5Cmin%5C!%5Cleft(rA,%5Coperatorname%7Bclip%7D(r,1-%5Cvarepsilon,1+%5Cvarepsilon)A%5Cright).%0A"></p>
+<p>A learned value function commonly supplies token advantages through generalized advantage estimation. PPO can also include an entropy bonus to encourage exploration. <a href="https://arxiv.org/abs/1707.06347v2">Schulman et al., 2017</a></p>
+<p>The critic can be expensive when implemented as another large model, and predicting the eventual reward from a partial proof is difficult. Its cost and accuracy depend on the implementation.</p>
+<p>Group Relative Policy Optimization (GRPO) replaces the learned critic with a baseline computed from sampled rewards. For each prompt, sample <img src="https://latex.codecogs.com/png.latex?G"> responses and compare their rewards:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AA_i=%5Cfrac%7BR_i-%5Cbar%20R%7D%7B%5Csigma_R+%5Cdelta%7D,%0A%5Cqquad%0A%5Cbar%20R=%5Cfrac%7B1%7D%7BG%7D%5Csum_%7Bj=1%7D%5E%7BG%7DR_j,%0A"></p>
+<p>where <img src="https://latex.codecogs.com/png.latex?%5Csigma_R"> is the group reward standard deviation and <img src="https://latex.codecogs.com/png.latex?%5Cdelta%3E0"> guards against division by zero. In this outcome-supervised version, the same <img src="https://latex.codecogs.com/png.latex?A_i"> is used for every token in response <img src="https://latex.codecogs.com/png.latex?i">. The original objective retains token ratios and clipping, averages tokens within each response, and includes a Kullback–Leibler (KL) divergence penalty relative to a reference policy. <a href="https://arxiv.org/html/2402.03300v3#S4.SS1">DeepSeekMath, §4.1</a></p>
+<p>Removing the critic saves resources; the total memory saving depends on the training stack. The group mean is a sampled baseline, not the exact expected reward for that prompt. GRPO was subsequently used in DeepSeek-R1’s RL training. <a href="https://arxiv.org/abs/2501.12948v1">DeepSeek-R1</a></p>
+<p>A sequence-level reward can naturally weight token gradients. The score-function identity gives</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cnabla_%5Ctheta%5Clog%5Cpi_%5Ctheta(y%5Cmid%20x)%0A=%5Csum_t%5Cnabla_%5Ctheta%5Clog%5Cpi_%5Ctheta(y_t%5Cmid%20x,y_%7B%3Ct%7D).%0A"></p>
+<p>Thus a sequence reward naturally weights a sum of token gradients in an on-policy policy-gradient estimator. What later methods reconsider is how those gradients are <strong>reweighted and clipped as the policy changes</strong>, and how responses of different lengths contribute to the update.</p>
+</section>
+<section id="entropy-measurement-and-dynamics" class="level2">
+<h2 class="anchored" data-anchor-id="entropy-measurement-and-dynamics">Entropy: measurement and dynamics</h2>
+<p>At a prefix <img src="https://latex.codecogs.com/png.latex?s=(x,y_%7B%3Ct%7D)">, the policy’s conditional entropy is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Ah_%5Ctheta(s)=-%5Csum_%7Bv%5Cin%5Cmathcal%20V%7D%5Cpi_%5Ctheta(v%5Cmid%20s)%5Clog%5Cpi_%5Ctheta(v%5Cmid%20s).%0A"></p>
+<p>A training dashboard usually averages a quantity like this over sampled prefixes. Write that as <img src="https://latex.codecogs.com/png.latex?H_d(%5Cpi_%5Ctheta)=%5Cmathbb%20E_%7Bs%5Csim%20d%7D%5Bh_%5Ctheta(s)%5D">, where <img src="https://latex.codecogs.com/png.latex?d"> specifies the prefixes and their weights. Prompt selection, decoding settings, and token-versus-response averaging matter when comparing runs.</p>
+<p>This measures uncertainty over tokens. It does not directly count distinct algorithms, useful tool strategies, or solvable problems. A model can vary its wording while repeating the same failed approach.</p>
+<p>Cui et al.&nbsp;observe rapid entropy loss followed by performance saturation in their studied runs, and fit the relationship</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0AR_%7B%5Cmathrm%7Bval%7D%7D%5Capprox-ae%5EH+b.%0A"></p>
+<p>Early observations predict later performance in their experiments. The authors also explicitly discuss settings with different entropy dynamics. The fitted endpoint <img src="https://latex.codecogs.com/png.latex?b-a"> is therefore a conditional extrapolation, not a universal ceiling on what RL can learn. <a href="https://arxiv.org/html/2505.22617v1#S2.SS4">Cui et al., §§2.4–2.6</a></p>
+<p>For an intuition about the direction of entropy change, consider a deliberately simple update at one fixed prefix. Hold advantage scores <img src="https://latex.codecogs.com/png.latex?A(v)"> fixed and reweight probabilities as</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Ap_%5Ceta(v)=%5Cfrac%7Bp(v)e%5E%7B%5Ceta%20A(v)%7D%7D%7B%5Csum_u%20p(u)e%5E%7B%5Ceta%20A(u)%7D%7D.%0A"></p>
+<p>Differentiating its entropy at <img src="https://latex.codecogs.com/png.latex?%5Ceta=0"> gives</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cleft.%5Cfrac%7BdH(p_%5Ceta)%7D%7Bd%5Ceta%7D%5Cright%7C_%7B%5Ceta=0%7D%0A=-%5Coperatorname%7BCov%7D_%7Bv%5Csim%20p%7D%5C!%5Cleft(%5Clog%20p(v),A(v)%5Cright).%0A"></p>
+<p>If already-probable actions tend to receive higher advantages, this update reduces entropy. If rare actions receive higher advantages, it can increase entropy. The sign depends on what is rewarded.</p>
+<p>This calculation describes an idealized multiplicative update at a fixed prefix. Cui et al.’s tabular analysis distinguishes vanilla policy gradient, involving <img src="https://latex.codecogs.com/png.latex?%5Coperatorname%7BCov%7D(%5Clog%5Cpi,%5Cpi%20A)">, from natural policy gradient, involving <img src="https://latex.codecogs.com/png.latex?%5Coperatorname%7BCov%7D(%5Clog%5Cpi,A)">. The observed tendency toward positive covariance does not imply monotonic entropy decline for every optimizer and training recipe. <a href="https://arxiv.org/html/2505.22617v1#S3">Cui et al., §3</a></p>
+<p>The same work introduces Clip-Cov and KL-Cov, which target selected tokens’ contributions through gradient suppression or KL regularization. These methods explicitly address entropy dynamics. <a href="https://arxiv.org/html/2505.22617v1#S4">Cui et al., §4</a></p>
+<p>Reinforcement can therefore concentrate probability on strategies that already work, making alternatives harder to encounter. For the exploration objective discussed here, entropy increases matter when they improve access to useful behaviors.</p>
+</section>
+<section id="dapo-several-practical-interventions" class="level2">
+<h2 class="anchored" data-anchor-id="dapo-several-practical-interventions">DAPO: several practical interventions</h2>
+<p>Decoupled Clip and Dynamic Sampling Policy Optimization (DAPO) addresses several observed failure modes in GRPO-style training. It retains token ratios and introduces four changes:</p>
+<ul>
+<li><strong>Clip-Higher:</strong> separate lower and upper clipping widths; the reported setting uses <img src="https://latex.codecogs.com/png.latex?%5Cvarepsilon_%7B%5Cmathrm%7Blow%7D%7D=0.2"> and <img src="https://latex.codecogs.com/png.latex?%5Cvarepsilon_%7B%5Cmathrm%7Bhigh%7D%7D=0.28">.</li>
+<li><strong>Dynamic Sampling:</strong> filter groups with no correctness variation and sample more until the informative batch is filled. This improves the learning signal per update, while requiring additional sampling.</li>
+<li><strong>Token-level loss:</strong> average over tokens, giving longer responses more total weight than per-response averaging does.</li>
+<li><strong>Overlong reward shaping:</strong> the paper evaluates masking truncated samples’ losses and introduces a soft length penalty near the generation limit to reduce truncation-related reward noise.</li>
+</ul>
+<p>DAPO also removes the reference-policy KL term. Its Clip-Higher ablation shows higher policy entropy and more diverse samples. <a href="https://arxiv.org/html/2503.14476v2#S3">Yu et al., §§2.3–3.4</a></p>
+<p>The effect of the upper clipping threshold depends on the token’s initial probability. With an upper ratio of <img src="https://latex.codecogs.com/png.latex?1.2">, a positively advantaged token starting at probability <img src="https://latex.codecogs.com/png.latex?0.01"> reaches the surrogate’s flat region at <img src="https://latex.codecogs.com/png.latex?0.012">. A token starting at <img src="https://latex.codecogs.com/png.latex?0.9"> cannot reach the corresponding <img src="https://latex.codecogs.com/png.latex?1.08"> boundary. The same relative threshold leaves very different room for absolute probability growth.</p>
+<p>Clipping does not enforce a hard probability cap: other samples and shared parameters can still move a clipped token’s probability. Nor is every rare token a useful exploration step. Clip-Higher gives rewarded rare tokens more room; it does not identify why a response succeeded.</p>
+<p>The paper reports 50% on AIME 2024 with Qwen2.5-32B, averaging accuracy over 32 repetitions. That is avg@32, not pass@32. Its reported reduction in update steps should not be read as an equal reduction in total compute. <a href="https://arxiv.org/html/2503.14476v2#S4">DAPO, §4</a></p>
+<p>These interventions address distinct issues: diversity, informative batches, length weighting, and reward noise. Clip-Higher directly targets the exploration concern; the other changes also affect how training data contributes to the update.</p>
+</section>
+<section id="gspo-one-ratio-weight-per-response" class="level2">
+<h2 class="anchored" data-anchor-id="gspo-one-ratio-weight-per-response">GSPO: one ratio weight per response</h2>
+<p>Group Sequence Policy Optimization (GSPO) changes the ratio and clipping unit. Let <img src="https://latex.codecogs.com/png.latex?T_i=%7Cy_i%7C">. The full sequence likelihood ratio is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Crho_i(%5Ctheta)=%5Cfrac%7B%5Cpi_%5Ctheta(y_i%5Cmid%20x)%7D%7B%5Cpi_%7B%5Cmathrm%7Bold%7D%7D(y_i%5Cmid%20x)%7D%0A=%5Cprod_%7Bt=1%7D%5E%7BT_i%7Dr_%7Bi,t%7D(%5Ctheta).%0A"></p>
+<p>GSPO instead uses its geometric mean,</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0As_i(%5Ctheta)=%5Crho_i(%5Ctheta)%5E%7B1/T_i%7D%0A=%5Cexp%5C!%5Cleft(%5Cfrac%7B1%7D%7BT_i%7D%5Csum_%7Bt=1%7D%5E%7BT_i%7D%5Clog%20r_%7Bi,t%7D(%5Ctheta)%5Cright),%0A"></p>
+<p>and optimizes a clipped surrogate at the response level:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cfrac%7B1%7D%7BG%7D%5Csum_%7Bi=1%7D%5E%7BG%7D%0A%5Cmin%5C!%5Cleft(s_iA_i,%0A%5Coperatorname%7Bclip%7D(s_i,1-%5Cvarepsilon_%7B%5Cmathrm%7Blow%7D%7D,1+%5Cvarepsilon_%7B%5Cmathrm%7Bhigh%7D%7D)A_i%5Cright).%0A"></p>
+<p>Length normalization controls the scale of the weight, but <img src="https://latex.codecogs.com/png.latex?s_i"> is a surrogate weight: the exact change-of-measure ratio is <img src="https://latex.codecogs.com/png.latex?%5Crho_i">. The paper uses much tighter clipping widths for this different quantity. <a href="https://arxiv.org/html/2507.18071v2#S4">Zheng et al., §§4–5</a></p>
+<p>Ignoring clipping, differentiating a response’s contribution gives</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cnabla_%5Ctheta(s_iA_i)%0A=%5Cfrac%7Bs_iA_i%7D%7BT_i%7D%5Csum_t%5Cnabla_%5Ctheta%5Clog%5Cpi_%5Ctheta(y_%7Bi,t%7D%5Cmid%20x,y_%7Bi,%3Ct%7D),%0A"></p>
+<p>with the sampled advantage held fixed. Every token score gradient receives the same response-level ratio weight. GRPO instead weights each one by its own token ratio.</p>
+<p>For positive <img src="https://latex.codecogs.com/png.latex?A_i">, the surrogate becomes flat above the upper boundary; for negative <img src="https://latex.codecogs.com/png.latex?A_i">, it becomes flat below the lower boundary. In those cases, that response contributes no policy-surrogate gradient. Being outside the interval in the opposite direction does not remove its gradient. Sequence clipping is therefore not simply an accept/reject rule for all out-of-range responses.</p>
+<p>The paper reports improved training stability and efficiency, including mixture-of-experts (MoE) training without Routing Replay, which reuses the old policy’s expert selections during updates. The reported roughly 10% change in activated experts concerns a particular Qwen3-30B-A3B setup, not a universal rate for every MoE token. <a href="https://arxiv.org/html/2507.18071v2#S5.SS3">GSPO, §5.3</a></p>
+<p>The paper does not establish an entropy-preservation result. Averaging log ratios also does not guarantee that local changes are small. For example, token ratios <img src="https://latex.codecogs.com/png.latex?2"> and <img src="https://latex.codecogs.com/png.latex?1/2"> produce <img src="https://latex.codecogs.com/png.latex?s_i=1">: substantial opposing changes can cancel in the aggregate.</p>
+<p>GSPO’s effect on useful diversity requires separate evaluation from its gains in update stability. The shared response advantage still leaves token-level credit assignment unresolved.</p>
+</section>
+<section id="the-map-separate-the-choices" class="level2">
+<h2 class="anchored" data-anchor-id="the-map-separate-the-choices">The map: separate the choices</h2>
+<p>The table summarizes each algorithm’s advantage estimation, ratio and clipping unit, loss averaging, and main change. Implementations can combine these choices.</p>
+<div class="table-responsive" tabindex="0" aria-label="Algorithm comparison; scroll horizontally to view all columns">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Method</th>
+<th>Advantage in this setting</th>
+<th>Ratio / clipping unit</th>
+<th>Loss averaging</th>
+<th>Main change</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>PPO</td>
+<td>Usually critic-based, per token</td>
+<td>Token</td>
+<td>Implementation-dependent</td>
+<td>Constrain updates while using estimated advantages</td>
+</tr>
+<tr class="even">
+<td>GRPO</td>
+<td>Group-relative, per response</td>
+<td>Token</td>
+<td>Token mean within each response, then response mean</td>
+<td>Remove the learned critic</td>
+</tr>
+<tr class="odd">
+<td>DAPO</td>
+<td>Group-relative, per response</td>
+<td>Token, asymmetric bounds</td>
+<td>Mean over tokens</td>
+<td>Change clipping, sampling, length weighting, and reward handling</td>
+</tr>
+<tr class="even">
+<td>GSPO</td>
+<td>Group-relative, per response</td>
+<td>Response, length-normalized ratio</td>
+<td>Mean over response surrogates</td>
+<td>Share the ratio weight and clipping decision across a response</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Entropy is an outcome to measure; ratio granularity alone does not determine it. Reference KL, explicit entropy regularization, decoding, and batch construction also affect the behavior of a particular run.</p>
+</section>
+<section id="why-pass1-is-not-enough" class="level2">
+<h2 class="anchored" data-anchor-id="why-pass1-is-not-enough">Why pass@1 is not enough</h2>
+<p>Yue et al.&nbsp;find that, for the models and RLVR recipes they evaluate, gains at small sampling budgets can coexist with worse coverage at large budgets. Their later revision also tests matching the RL model’s output entropy to the base model’s by adjusting temperature; a pass@k gap remains. Reduced entropy alone does not explain the observed narrowing. <a href="https://arxiv.org/html/2504.13837v5#S4.SS5">Yue et al., §§3–4.5</a></p>
+<p>For a prompt with independent-sample success probability <img src="https://latex.codecogs.com/png.latex?p_x">,</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Coperatorname%7Bpass@%7Dk(x)=1-(1-p_x)%5Ek.%0A"></p>
+<p>Across prompts, raising already-high success probabilities while lowering small ones can improve average pass@1 and reduce large-<img src="https://latex.codecogs.com/png.latex?k"> coverage. No capability has to become literally impossible to sample for this trade-off to matter in practice.</p>
+<p>Finite-<img src="https://latex.codecogs.com/png.latex?k"> measurements describe what is reachable under a sampling budget and evaluation protocol. They cannot prove that RL never learns a new reasoning behavior. ProRL, for example, reports gains at both low and high <img src="https://latex.codecogs.com/png.latex?k"> in some domains, starting from an already-distilled reasoning checkpoint and using a different training recipe. <a href="https://arxiv.org/html/2505.24864v1#S4.SS2">Liu et al., §4.2</a></p>
+<p>Pass@k also assumes a way to recognize a successful sample. It is not the accuracy of a system that must select an answer without a verifier.</p>
+<p>Evaluation should track both single-sample performance and coverage across several sampling budgets, with prompts and decoding settings controlled. Entropy adds context to those measurements. It does not replace them.</p>
+</section>
+<section id="a-systems-caveat-which-policy-generated-the-data" class="level2">
+<h2 class="anchored" data-anchor-id="a-systems-caveat-which-policy-generated-the-data">A systems caveat: which policy generated the data?</h2>
+<p>Policy drift is only one reason training and rollout probabilities can disagree. Different engines can assign different probabilities to the same tokens even with the same weights.</p>
+<p>Qi et al.&nbsp;find that switching both rollout inference and mixed-precision training from BF16 to FP16 substantially reduces this mismatch in their experiments. FP16 has 10 fraction bits versus BF16’s 7: eightfold finer spacing within the same normal exponent interval, with a narrower numerical range. This is mixed-precision training, not a prescription to cast every tensor to FP16. <a href="https://arxiv.org/html/2510.26788v1#S3">Qi et al., §§3–4</a></p>
+<p>In their filtered-MATH test with DeepSeek-R1-Distill-Qwen-1.5B, a simple importance-weighted policy-gradient method in FP16 outperforms BF16 baselines, and algorithm differences narrow under FP16. Broader experiments support the precision benefit, without establishing FP16 as universally preferable. <a href="https://arxiv.org/html/2510.26788v1#S4">Qi et al., §§4–6</a></p>
+<p>This distinction matters when interpreting likelihood ratios: changes caused by learning and disagreement introduced by training and sampling systems can both affect the measured ratio.</p>
+</section>
+<section id="implications-for-agents" class="level2">
+<h2 class="anchored" data-anchor-id="implications-for-agents">Implications for agents</h2>
+<p>Consider a coding agent with two possible strategies. One edits the obvious file immediately. Another first traces call sites and dependencies, sometimes finding the actual fault elsewhere. If the training distribution rewards the first strategy more consistently, the second could become harder to sample even when it would help on unfamiliar tasks.</p>
+<p>This is a behavioral hypothesis, not a result established by the benchmarks above. Testing it requires measuring variation in investigation strategies, tool use, and successful fixes, along with success under a fixed time or token budget. High token entropy could reflect productive investigation or random edits; it cannot distinguish them on its own.</p>
+<p>The relevant outcome is whether training preserves access to alternative strategies that succeed on tasks where the dominant strategy fails.</p>
+</section>
+<section id="evaluating-the-trade-offs" class="level2">
+<h2 class="anchored" data-anchor-id="evaluating-the-trade-offs">Evaluating the trade-offs</h2>
+<p>Evaluating a GRPO-family method requires identifying the change to the update, the failure mode it targets, and the measurements supporting its claims. For a training run, relevant diagnostics include reward, entropy, repeated-sampling coverage, response length, clipping behavior, and training–rollout agreement.</p>
+<p>Rapid concentration of probability can make useful alternatives harder to encounter. The budget metaphor highlights a measurable question: <strong>as reward improves, which useful behaviors become easier—or harder—to reach?</strong></p>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<ul>
+<li>Schulman et al., <em>Proximal Policy Optimization Algorithms</em>, 2017. <a href="https://arxiv.org/abs/1707.06347v2">arXiv:1707.06347v2</a></li>
+<li>Shao et al., <em>DeepSeekMath: Pushing the Limits of Mathematical Reasoning in Open Language Models</em>, 2024. <a href="https://arxiv.org/abs/2402.03300v3">arXiv:2402.03300v3</a></li>
+<li>DeepSeek-AI et al., <em>DeepSeek-R1: Incentivizing Reasoning Capability in LLMs via Reinforcement Learning</em>, 2025. <a href="https://arxiv.org/abs/2501.12948v1">arXiv:2501.12948v1</a></li>
+<li>Yu et al., <em>DAPO: An Open-Source LLM Reinforcement Learning System at Scale</em>, 2025. <a href="https://arxiv.org/abs/2503.14476v2">arXiv:2503.14476v2</a></li>
+<li>Zheng et al., <em>Group Sequence Policy Optimization</em>, 2025. <a href="https://arxiv.org/abs/2507.18071v2">arXiv:2507.18071v2</a></li>
+<li>Cui et al., <em>The Entropy Mechanism of Reinforcement Learning for Reasoning Language Models</em>, 2025. <a href="https://arxiv.org/abs/2505.22617v1">arXiv:2505.22617v1</a></li>
+<li>Yue et al., <em>Does Reinforcement Learning Really Incentivize Reasoning Capacity in LLMs Beyond the Base Model?</em>, 2025. <a href="https://arxiv.org/abs/2504.13837v5">arXiv:2504.13837v5</a></li>
+<li>Liu et al., <em>ProRL: Prolonged Reinforcement Learning Expands Reasoning Boundaries in Large Language Models</em>, 2025. <a href="https://arxiv.org/abs/2505.24864v1">arXiv:2505.24864v1</a></li>
+<li>Qi et al., <em>Defeating the Training-Inference Mismatch via FP16</em>, 2025. <a href="https://arxiv.org/abs/2510.26788v1">arXiv:2510.26788v1</a></li>
+</ul>
+
+
+</section>
+
+ ]]></description>
+  <category>reinforcement-learning</category>
+  <category>llm</category>
+  <category>post-training</category>
+  <category>grpo</category>
+  <category>gspo</category>
+  <category>dapo</category>
+  <category>entropy</category>
+  <guid>https://qianrongwu.com/posts/entropy-budget/</guid>
+  <pubDate>Mon, 31 Aug 2026 07:00:00 GMT</pubDate>
+</item>
 <item>
   <title>How Detectors Inherit Their Blind Spots</title>
   <link>https://qianrongwu.com/posts/detectors-inherit/</link>
