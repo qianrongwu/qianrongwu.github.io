@@ -21,7 +21,7 @@
 
 
 <div class="lead">
-<p>In the simulation below, a new account-takeover detector appears to catch <strong>78% of attacks</strong>. Measured against every attack, it catches <strong>57%</strong>. The detector has not changed. The labels have.</p>
+<p>In the simulation below, a new account-takeover detector appears to catch <strong>78% of attacks</strong>. Measured against every attack, it catches <strong>57%</strong>. The detector has not changed. The set of attacks we count has.</p>
 </div>
 <p>Recall is the share of actual attacks a detector catches. That sounds straightforward—until we ask how an attack becomes an “actual attack” in the dataset.</p>
 <p>In production, an investigation might begin because the existing detector flagged a suspicious login. A customer report or account recovery might confirm a compromise later. Those paths produce useful evidence, but they do not reach every attack. An attack that attracts no attention may never receive a label at all.</p>
@@ -37,10 +37,10 @@
 <li><strong>Loud attacks</strong> arrive in bursts, with high request rates and familiar signs of automation.</li>
 <li><strong>Quiet attacks</strong> move slowly. Device novelty and implausible geography provide clues, but their request rates look ordinary.</li>
 </ul>
-<p>The existing detector—the <em>incumbent</em>—relies on request rate. In this simulated population, it flags <strong>88.7% of loud attacks</strong> and just <strong>6.4% of quiet attacks</strong>. Every flagged event receives a correct label. The investigators make no mistakes; the gap comes from which events reach them.</p>
-<p>Of <strong>15,831 attacks</strong>, the incumbent surfaces <strong>8,182</strong>. A small random audit finds another <strong>370</strong> that the incumbent missed. That leaves <strong>7,279 attacks</strong> unresolved.</p>
+<p>The existing detector—the <em>incumbent</em>—relies on request rate. In this simulated population, it flags <strong>88.7% of loud attacks</strong> and just <strong>6.4% of quiet attacks</strong>. Every flagged event receives a correct label; the gap comes from which events get investigated.</p>
+<p>Of <strong>15,831 attacks</strong>, the incumbent surfaces <strong>8,182</strong>. A small random audit (described below) finds another <strong>370</strong> that the incumbent missed. That leaves <strong>7,279 attacks</strong> unresolved.</p>
 <p>The simulated data pipeline records those unresolved events as negative. That is a consequential assumption: <em>nobody investigated it</em> becomes <em>it was benign</em>. A pipeline that leaves such events unlabeled avoids this particular error, but its labeled dataset still underrepresents attacks the detector misses.</p>
-<p>This is the problem of <strong>selective labels</strong>: the process that decides what to investigate also determines what we can learn from the resulting data.</p>
+<p>This is the <strong>selective labels</strong> problem described by <a href="https://cs.stanford.edu/~jure/pubs/contraction-kdd17.pdf">Lakkaraju et al.&nbsp;(2017)</a>: earlier decisions determine which outcomes are observed.<sup>1</sup></p>
 </section>
 <section id="the-same-model-can-appear-to-have-very-different-recall" class="level2">
 <h2 class="anchored" data-anchor-id="the-same-model-can-appear-to-have-very-different-recall">One detector, three answers</h2>
@@ -73,15 +73,16 @@ Figure&nbsp;1: The candidate’s predictions are identical in all three estimate
 <section id="breaking-the-feedback-loop" class="level2">
 <h2 class="anchored" data-anchor-id="breaking-the-feedback-loop">Build an audit that reaches beyond the detector</h2>
 <p>The first step is to give unflagged events a chance to be investigated. Randomly select a small sample of traffic, resolve its labels, and record each event’s probability of being selected. The incumbent can help define risk groups, but it should not be the only route into the audit.</p>
-<p>The simulator samples <strong>5% of lower-risk traffic</strong> and <strong>2% of higher-risk traffic</strong>. Its holdout bypasses enforcement so downstream outcomes can be observed. In production, first establish whether investigation can resolve the label while protections remain in place. Sampling events for review and allowing risky events through are separate decisions.</p>
+<p>The simulator samples <strong>5% of lower-risk traffic</strong> and <strong>2% of higher-risk traffic</strong>. It models this audit as a holdout that bypasses enforcement and receives reliable downstream labels. That is a choice in the simulation, not a requirement for an audit.</p>
+<p>For a production audit, first establish whether investigation can resolve the label while protections remain in place. Sampling events for review and allowing risky events through are separate decisions.</p>
 <p>Unequal sampling creates a second measurement problem. The audit contains proportionally more lower-risk traffic, including quiet attacks the candidate struggles to catch. Simply averaging over audited attacks gives the <strong>45.4%</strong> estimate.</p>
 <section id="let-each-sampled-event-represent-its-share-of-traffic" class="level3">
 <h3 class="anchored" data-anchor-id="let-each-sampled-event-represent-its-share-of-traffic">Let each sampled event represent its share of traffic</h3>
 <p>An event sampled at a 5% rate represents 20 events. An event sampled at a 2% rate represents 50. These weights let us estimate population counts from the sample.</p>
 <p>For audit sample <img src="https://latex.codecogs.com/png.latex?H">, let <img src="https://latex.codecogs.com/png.latex?p_i"> be event <img src="https://latex.codecogs.com/png.latex?i">’s inclusion probability, <img src="https://latex.codecogs.com/png.latex?Y_i"> be 1 if it is an attack, and <img src="https://latex.codecogs.com/png.latex?D_i"> be 1 if the candidate flags it. Then:</p>
 <p><img src="https://latex.codecogs.com/png.latex?%0A%5Cwidehat%7BR%7D%0A=%20%5Cfrac%7B%5Csum_%7Bi%20%5Cin%20H%7D%20w_i%20D_i%20Y_i%7D%7B%5Csum_%7Bi%20%5Cin%20H%7D%20w_i%20Y_i%7D,%0A%5Cqquad%20w_i%20=%20%5Cfrac%7B1%7D%7Bp_i%7D.%0A"></p>
-<p>In words: <strong>estimated attacks caught, divided by estimated attacks present</strong>. This ratio uses inverse-probability weighting.<sup>1</sup></p>
-<p>The probabilities are known because we chose the sampling policy. We do not have to reconstruct them from historical enforcement decisions. In this run, the weighted estimate is <strong>56.4%</strong>, with an approximate <strong>95% bootstrap interval of 52.1%–60.4%</strong>.<sup>2</sup></p>
+<p>In words: <strong>estimated attacks caught, divided by estimated attacks present</strong>. This ratio uses inverse-probability weighting.<sup>2</sup></p>
+<p>The probabilities are known because we chose the sampling policy. We do not have to reconstruct them from historical enforcement decisions. In this run, the weighted estimate is <strong>56.4%</strong>, with an approximate <strong>95% bootstrap interval of 52.1%–60.4%</strong>.<sup>3</sup></p>
 </section>
 <section id="what-weighting-canand-cannotfix" class="level3">
 <h3 class="anchored" data-anchor-id="what-weighting-canand-cannotfix">What weighting can—and cannot—fix</h3>
@@ -94,7 +95,7 @@ Figure&nbsp;1: The candidate’s predictions are identical in all three estimate
 <h2 class="anchored" data-anchor-id="a-second-feedback-path-exposing-the-model-score-to-the-labeler">When labelers see the model’s answer</h2>
 <p>Selection is one way the detector shapes its labels. Showing a reviewer the detector’s risk score is another.</p>
 <p>A human or LLM reviewer may have device history, IP reputation, account relationships, and post-login activity. Adding the incumbent’s score can help an operational decision. But if the review is meant to provide an independent check on that detector, the score introduces a direct path for its judgment to influence the label.</p>
-<p>The simulator explores this with programmed annotators. One uses the case evidence alone; another is explicitly designed to lean toward the incumbent’s score when uncertain. This is an illustration of score dependence, not an experiment on real humans or LLMs.</p>
+<p>The simulator explores this with programmed annotators. One uses the case evidence alone; another is explicitly designed to lean toward the incumbent’s score when uncertain. This does not test whether real reviewers anchor on scores. It shows where the cost can land if they do: on attacks the incumbent already misses.</p>
 <p>Both annotators label <strong>20% of the same review pool</strong> as attacks. The pool is the risk-screened <strong>top 10% of traffic</strong>, not the full population. The following results are weighted audit estimates within that pool:</p>
 <table class="caption-top table">
 <thead>
@@ -140,7 +141,7 @@ Figure&nbsp;2: In the programmed score-exposure experiment, agreement with the i
 <p>The exposed annotator agrees more with the incumbent while finding fewer of the quiet attacks it misses. At the same positive-label budget, estimated quiet-attack recall falls by <strong>14.6 percentage points</strong>.</p>
 <section id="agreement-is-not-ground-truth" class="level3">
 <h3 class="anchored" data-anchor-id="agreement-is-not-ground-truth">Agreement is not ground truth</h3>
-<p>The simulator also compares the score-hidden annotator with a separate, simulated human reviewer. Their agreement barely changes between the incumbent-selected sample and the weighted audit: <strong>88.0% versus 87.9%</strong>. Yet the annotator’s recall against simulated truth is <strong>93.1% on the selected sample</strong> and an estimated <strong>73.5% in the review pool</strong>.</p>
+<p>The simulator also compares the score-hidden annotator with a separate, simulated human reviewer. On the incumbent-selected cases within the review pool, their agreement is <strong>88.0%</strong>, and the annotator’s recall against simulated truth is <strong>93.1%</strong>. On the random audit within that same pool, weighting gives <strong>87.9% agreement</strong> and <strong>73.5% recall</strong>.</p>
 <p>The annotator has not changed. The evaluation population has. Agreement alone does not reveal that the broader pool is harder, and two reviewers can agree while sharing the same mistakes.</p>
 <p>For an independent audit, hide the incumbent’s score and decision, including obvious proxies in the case summary. Blinding removes this direct source of influence; it does not guarantee independent errors. Reviewers may still share evidence, instructions, or blind spots.</p>
 </section>
@@ -183,8 +184,9 @@ font-style: inherit;">python</span> demo_labelers.py</span></code></pre></div></
 <div id="quarto-appendix" class="default"><section id="footnotes" class="footnotes footnotes-end-of-document"><h2 class="anchored quarto-appendix-heading">Footnotes</h2>
 
 <ol>
-<li id="fn1"><p>The formula is a ratio of Horvitz–Thompson estimates of totals, sometimes called a Hájek-style estimator. Each total is unbiased under the sampling design when inclusion probabilities are positive and labels are correctly observed. Their ratio is generally not exactly unbiased, though it is consistent under standard regularity conditions. See <a href="https://www150.statcan.gc.ca/n1/pub/12-001-x/2016001/article/14540/03-eng.htm">Statistics Canada’s treatment of Horvitz–Thompson and Hájek estimators</a>.↩︎</p></li>
-<li id="fn2"><p>The simulator takes 400 bootstrap resamples of the observed attacks in the audit and uses the 2.5th and 97.5th percentiles. This is an illustrative interval for the fixed candidate; it does not capture label errors, model training uncertainty, or changes in future traffic.↩︎</p></li>
+<li id="fn1"><p>Selective labels need not be <em>missing not at random</em> (MNAR). Here, label availability depends on recorded request rate and a random audit, so it is <em>missing at random</em> (MAR) conditional on the observed features. MNAR would mean that label availability still depends on the unobserved outcome after conditioning on those features. Without the audit, some events have no chance of being labeled; MAR alone does not restore that coverage. For the missing-data terminology, see <a href="https://people.csail.mit.edu/jrennie/trg/papers/rubin-missing-76.pdf">Rubin (1976)</a>.↩︎</p></li>
+<li id="fn2"><p>The formula is a ratio of Horvitz–Thompson estimates of totals, sometimes called a Hájek-style estimator. Each total is unbiased under the sampling design when inclusion probabilities are positive and labels are correctly observed. Their ratio is generally not exactly unbiased, though it is consistent under standard regularity conditions. See <a href="https://www150.statcan.gc.ca/n1/pub/12-001-x/2016001/article/14540/03-eng.htm">Statistics Canada’s treatment of Horvitz–Thompson and Hájek estimators</a>.↩︎</p></li>
+<li id="fn3"><p>The simulator takes 400 bootstrap resamples of the observed attacks in the audit and uses the 2.5th and 97.5th percentiles. This is an illustrative interval for the fixed candidate; it does not capture label errors, model training uncertainty, or changes in future traffic.↩︎</p></li>
 </ol>
 </section></div> ]]></description>
   <category>detection</category>
