@@ -1,233 +1,163 @@
 ---
-title: "Detectors Inherit the Systems That Label Them"
-description: "In adversarial systems, labels are produced by the detector."
+title: "How Detectors Inherit Their Blind Spots"
+description: "When a detector decides what gets investigated, it shapes the labels used to train and evaluate its successor."
 date: 2026-08-30
+date-modified: 2026-09-14
 categories: [detection, training-data, security-ml, label]
 image: figure.png
 toc: true
+toc-title: "In this article"
+toc-depth: 2
+format:
+  html:
+    css: article.css
 ---
 
-Detection models are usually trained on historical labels.
+::: {.lead}
+In the simulation below, a new account-takeover detector appears to catch **78% of attacks**. Measured against every attack, it catches **57%**. The detector has not changed. The labels have.
+:::
 
-In adversarial systems, those labels are rarely neutral.
+Recall is the share of actual attacks a detector catches. That sounds straightforward—until we ask how an attack becomes an “actual attack” in the dataset.
 
-Consider account takeover detection. A login attempt may become a confirmed positive because the existing system challenged it, the challenge failed, the user later recovered the account, or support confirmed the compromise.
+In production, an investigation might begin because the existing detector flagged a suspicious login. A customer report or account recovery might confirm a compromise later. Those paths produce useful evidence, but they do not reach every attack. An attack that attracts no attention may never receive a label at all.
 
-But what about an attack the existing detector never noticed?
+When we evaluate the next detector on those labels, we can mistake coverage of *known attacks* for coverage of *all attacks*. And when we train on the same data, that gap can shape what the next detector learns.
 
-Often, nothing happens. No challenge, no review, no recovery signal. The event remains unlabeled—or worse, is treated as negative.
+> A detector helps decide which attacks become visible. Its successor inherits that view of the world.
 
-This creates a simple but important problem:
+I built a [small simulator](#simulator) to make this problem visible. All results here are synthetic: we know which logins are attacks, including the ones the labeling process misses. The examples illustrate mechanisms, not measured performance in a production system.
 
-> The system deciding what to inspect is also shaping the data used to train its successor.
-
-The result is a feedback loop: detectors tend to inherit the blind spots of the systems that generated their labels.
-
-## Labels are selectively observed
-
-Let $Y$ denote whether an event is truly malicious and $S$ whether the existing system selects it for inspection.
-
-In many production pipelines, we observe $Y$ reliably only when $S = 1$.
-
-The problem is that selection is not random:
-
-$$P(S = 1 \mid X, Y) \neq P(S = 1)$$
-
-The incumbent detector selects examples using features $X$ that are themselves correlated with maliciousness.
-
-So the missing labels are **missing not at random**.
-
-This matters even if the labeling process after selection is perfect.
+## The attacks that never become labels {#labels-are-selectively-observed}
 
 Imagine two kinds of account takeover:
 
-- **Loud attacks:** high velocity, repeated IPs, obvious automation.
-- **Quiet attacks:** low velocity, novel devices, unusual geography, but otherwise normal behavior.
+- **Loud attacks** arrive in bursts, with high request rates and familiar signs of automation.
+- **Quiet attacks** move slowly. Device novelty and implausible geography provide clues, but their request rates look ordinary.
 
-Suppose the incumbent detector was built mostly around velocity. In a simulation, it catches:
+The existing detector—the *incumbent*—relies on request rate. In this simulated population, it flags **88.7% of loud attacks** and just **6.4% of quiet attacks**. Every flagged event receives a correct label. The investigators make no mistakes; the gap comes from which events reach them.
 
-- **88.7%** of loud attacks
-- **6.4%** of quiet attacks
+Of **15,831 attacks**, the incumbent surfaces **8,182**. A small random audit finds another **370** that the incumbent missed. That leaves **7,279 attacks** unresolved.
 
-There are 15,831 true attacks in total.
+The simulated data pipeline records those unresolved events as negative. That is a consequential assumption: *nobody investigated it* becomes *it was benign*. A pipeline that leaves such events unlabeled avoids this particular error, but its labeled dataset still underrepresents attacks the detector misses.
 
-Only 8,552 become observed positives. The remaining **7,279 attacks are never surfaced by the incumbent and therefore look benign in the training data.**
+This is the problem of **selective labels**: the process that decides what to investigate also determines what we can learn from the resulting data.
 
-That is already enough to distort evaluation.
+## One detector, three answers {#the-same-model-can-appear-to-have-very-different-recall}
 
-## The same model can appear to have very different recall
+Now evaluate a candidate detector that uses device and geography signals as well as request rate. Hold its predictions fixed and change only how recall is measured.
 
-Suppose a candidate model has true recall of **57.2%**.
+![The candidate's predictions are identical in all three estimates. The dashed line marks recall across all simulated attacks. The weighted estimate includes an approximate 95% bootstrap interval.](figure.svg){#fig-recall fig-alt="Recall is 78.0% using production labels, 45.4% in the unweighted audit, and 56.4% in the weighted audit. True recall is 57.2%. The weighted estimate's approximate 95% bootstrap interval is 52.1% to 60.4%."}
 
-Evaluate it using the production labels generated above, and estimated recall becomes:
+The production-label estimate is **20.8 percentage points too high**. Its denominator contains attacks that were discovered, overwhelmingly through the incumbent's checks. It answers: *Of the attacks our existing process found, how many would this candidate flag?*
 
-| estimator | estimated recall |
-|---|---|
-| existing warehouse labels | 78.0% |
-| sampled holdout, unweighted | 45.4% |
-| sampled holdout, weighted | 56.4% |
-| true recall | 57.2% |
+That is a useful question. It is also a narrower question than overall recall.
 
-![Three estimates of the same model's recall. The dashed line is the truth; the whisker is a bootstrap interval on the weighted estimate.](figure.png)
+The bias is optimistic in this example because the candidate does well on the attacks the incumbent surfaces. For another candidate, the bias could point the other way. Collecting more data through the same selection process does not, by itself, correct either bias.
 
-The first estimate is not merely noisy. It is systematically optimistic.
+The audit estimates tell the rest of the story. Random sampling reaches attacks outside the incumbent's view, but sampling different groups at different rates changes the mix. Correcting for those rates brings the estimate from **45.4% to 56.4%**, close to the true **57.2%**. We will unpack that correction below.
 
-Its denominator is effectively:
+## How blind spots reach the next model {#why-this-affects-training-not-just-metrics}
 
-> attacks the existing system already knows how to find
+The same labels often feed both evaluation and training. If discovered attacks are positive and undiscovered attacks are negative, a model is rewarded for reproducing part of the incumbent's behavior. A feature that identifies a missed attack may even be penalized, because the training label says the event was benign.
 
-rather than:
+Once deployed, that model helps choose which events get investigated next. The cycle can repeat:
 
-> all attacks
+::: {.feedback-loop aria-label="Feedback cycle: detector, investigations, labels, next detector, then more investigations."}
+**Detector** → investigations → labels → **next detector**
+:::
 
-More production traffic does not fix this. With enough data, the biased estimate simply becomes more precise.
+This is a mechanism by which blind spots can persist, not a claim that every successor must reproduce them. New features, customer reports, and other sources of evidence can expand coverage. The simulator itself holds the candidate's scoring rule fixed; it does not train models across generations.
 
-## Why this affects training, not just metrics
+Even this fixed candidate shows why aggregate metrics need context. It catches **79.5% of loud attacks** and **30.0% of quiet attacks**. Compared with the incumbent, it improves quiet-attack coverage while losing some loud-attack coverage. A single recall estimate against production labels cannot explain that tradeoff.
 
-If this only corrupted a dashboard, we could add a warning label and move on.
+## Build an audit that reaches beyond the detector {#breaking-the-feedback-loop}
 
-But the same data is usually used for training.
+The first step is to give unflagged events a chance to be investigated. Randomly select a small sample of traffic, resolve its labels, and record each event's probability of being selected. The incumbent can help define risk groups, but it should not be the only route into the audit.
 
-The model sees detected attacks as positives and many undetected attacks as negatives. It therefore learns a decision boundary that resembles the incumbent detector.
+The simulator samples **5% of lower-risk traffic** and **2% of higher-risk traffic**. Its holdout bypasses enforcement so downstream outcomes can be observed. In production, first establish whether investigation can resolve the label while protections remain in place. Sampling events for review and allowing risky events through are separate decisions.
 
-In the same simulation, the candidate model detects:
+Unequal sampling creates a second measurement problem. The audit contains proportionally more lower-risk traffic, including quiet attacks the candidate struggles to catch. Simply averaging over audited attacks gives the **45.4%** estimate.
 
-- **79.5%** of loud attacks
-- **30.0%** of quiet attacks
+### Let each sampled event represent its share of traffic
 
-Yet evaluation against incumbent-generated labels largely hides this difference.
+An event sampled at a 5% rate represents 20 events. An event sampled at a 2% rate represents 50. These weights let us estimate population counts from the sample.
 
-After deployment, the new model determines which examples become visible in the next round of data.
+For audit sample $H$, let $p_i$ be event $i$'s inclusion probability, $Y_i$ be 1 if it is an attack, and $D_i$ be 1 if the candidate flags it. Then:
 
-The loop becomes:
+$$
+\widehat{R}
+= \frac{\sum_{i \in H} w_i D_i Y_i}{\sum_{i \in H} w_i Y_i},
+\qquad w_i = \frac{1}{p_i}.
+$$
 
-$$\text{detector} \rightarrow \text{selection} \rightarrow \text{labels} \rightarrow \text{next detector}$$
+In words: **estimated attacks caught, divided by estimated attacks present**. This ratio uses inverse-probability weighting.[^weighting]
 
-Without an independent source of labels, blind spots can persist across model generations.
+The probabilities are known because we chose the sampling policy. We do not have to reconstruct them from historical enforcement decisions. In this run, the weighted estimate is **56.4%**, with an approximate **95% bootstrap interval of 52.1%–60.4%**.[^interval]
 
-## Breaking the feedback loop
+### What weighting can—and cannot—fix
 
-The cleanest solution is conceptually simple:
+Weighting corrects unequal sampling. It cannot supply labels for a group that is never sampled, turn unresolved cases into known negatives, or repair incorrect labels. Every group in the target population needs a nonzero chance of observation, and sampled cases need reliable labels.
 
-> Randomly observe a small amount of traffic independently of the detector.
+The target also matters. This simulator measures detection of **malicious attempts**. Measuring **successful compromises** is different: an enforcement action can prevent the outcome you are trying to observe.
 
-For that traffic, allow downstream outcomes or manual investigation to establish the label.
+Small sampling rates produce large weights, so a few cases can have substantial influence. Choose rates with review cost and precision in mind. If obtaining an outcome requires relaxing enforcement, exposure limits come first—especially on a platform serving young users. Where those limits leave a group unobserved, report the coverage gap.
 
-This produces a sample in which label availability is determined by a known sampling policy rather than by the incumbent detector.
+## When labelers see the model's answer {#a-second-feedback-path-exposing-the-model-score-to-the-labeler}
 
-In security systems, uniform sampling is often impractical. Allowing high-risk traffic through is more expensive than allowing low-risk traffic through.
+Selection is one way the detector shapes its labels. Showing a reviewer the detector's risk score is another.
 
-So suppose we sample different risk groups at different rates.
+A human or LLM reviewer may have device history, IP reputation, account relationships, and post-login activity. Adding the incumbent's score can help an operational decision. But if the review is meant to provide an independent check on that detector, the score introduces a direct path for its judgment to influence the label.
 
-Then a plain average over the holdout is still biased, because its attack mix no longer matches the population's. In the simulation that error is about the same size as the one we just removed, pointing the other way.
+The simulator explores this with programmed annotators. One uses the case evidence alone; another is explicitly designed to lean toward the incumbent's score when uncertain. This is an illustration of score dependence, not an experiment on real humans or LLMs.
 
-Record the inclusion probability $p_i$ for every sampled event and define
+Both annotators label **20% of the same review pool** as attacks. The pool is the risk-screened **top 10% of traffic**, not the full population. The following results are weighted audit estimates within that pool:
 
-$$w_i = \frac{1}{p_i}.$$
+| Annotator metric | Score hidden | Score exposed |
+|:--|--:|--:|
+| Agreement with incumbent | 84.3% | 88.7% |
+| Recall across attacks in the pool | 73.5% | 69.4% |
+| Recall on loud attacks | 92.7% | 93.9% |
+| Recall on quiet attacks | **35.4%** | **20.8%** |
 
-Then estimate recall with
+![In the programmed score-exposure experiment, agreement with the incumbent rises while recall on quiet attacks falls. Both panels use weighted audit estimates within the review pool.](figure_labelers.svg){#fig-labelers fig-alt="With the score exposed, estimated agreement with the incumbent rises from 84.3% to 88.7%, while estimated recall on quiet attacks falls from 35.4% to 20.8%."}
 
-$$\widehat{R} = \frac{\sum_{i \in H} w_i \, \text{pred}_i \, Y_i}{\sum_{i \in H} w_i \, Y_i}.$$
+The exposed annotator agrees more with the incumbent while finding fewer of the quiet attacks it misses. At the same positive-label budget, estimated quiet-attack recall falls by **14.6 percentage points**.
 
-This is inverse-probability weighting, or a Horvitz–Thompson style estimator.
+### Agreement is not ground truth
 
-The important part is that $p_i$ **is known because we chose it.**
+The simulator also compares the score-hidden annotator with a separate, simulated human reviewer. Their agreement barely changes between the incumbent-selected sample and the weighted audit: **88.0% versus 87.9%**. Yet the annotator's recall against simulated truth is **93.1% on the selected sample** and an estimated **73.5% in the review pool**.
 
-We are correcting for a sampling decision we control, rather than trying to model an unknown adversarial selection mechanism after the fact.
+The annotator has not changed. The evaluation population has. Agreement alone does not reveal that the broader pool is harder, and two reviewers can agree while sharing the same mistakes.
 
-In the simulation:
+For an independent audit, hide the incumbent's score and decision, including obvious proxies in the case summary. Blinding removes this direct source of influence; it does not guarantee independent errors. Reviewers may still share evidence, instructions, or blind spots.
 
-- unweighted holdout recall: **45.4%**
-- weighted holdout recall: **56.4%**
-- true recall: **57.2%**
+## What I would change in production {#what-i-would-do-in-practice}
 
-The tradeoff is variance. Small sampling probabilities create large weights, which widen confidence intervals.
+I would start with four changes to the labeling pipeline:
 
-So the practical design problem becomes:
+1. **Keep “unknown” distinct from “benign.”** Record how each label was obtained: what triggered review, what evidence resolved the case, and when the outcome became available. Preserve unresolved cases as unresolved.
+2. **Maintain a random audit across risk groups.** Include unflagged traffic, log inclusion probabilities, and track unresolved audit cases. Report weighted estimates with uncertainty and make gaps in coverage explicit.
+3. **Break out performance by attack pattern.** Aggregate recall can conceal a detector that improves on familiar attacks while missing a growing segment. Use patterns supported by the evidence; the simulator's clean “loud” and “quiet” labels will not always exist in production.
+4. **Separate operational review from independent evaluation.** Scores may help reviewers act, but an audit needs evidence that can challenge the detector's judgment. Use blinded review and check more than reviewer agreement.
 
-> How much unbiased measurement can we afford?
+Label generation is part of the detection system. Improving it gives the next model a better chance to learn something the current model does not know.
 
-That is a much healthier problem than unknowingly optimizing against biased labels.
+**Before trusting a recall estimate, ask how an attack enters its denominator—and which attacks have no way in.**
 
-It is also not only a statistical question. On a platform serving young users, holdout exposure has to be capped, guardrailed, and reviewed, and those limits bind before the variance calculation does.
+## Reproduce the examples {#simulator}
 
-## A second feedback path: exposing the model score to the labeler
+The code is in [labels-are-estimators](https://github.com/qianrongwu/labels-are-estimators). From a checkout, install the dependencies and run both examples:
 
-There is another, easier-to-fix source of dependence.
+```bash
+python -m pip install -r requirements.txt
+python demo.py
+python demo_labelers.py
+```
 
-Suppose an LLM or human annotator receives a rich case summary:
+The reported values use the default `Config`: 800,000 sessions, 2% attack prevalence, a 45% quiet share among attacks, and random seed 7. The candidate flags 2% of traffic. The article's charts redraw the simulator's results with simpler labels.
 
-- device history
-- IP reputation
-- account graph
-- post-login activity
-- geolocation
+To explore the mechanism, vary `p_quiet`, `gate_threshold`, `holdout_rate_low`, and `holdout_rate_high` in `simulate.py`. Compare the estimation error and interval width across multiple seeds. The size—and sometimes the direction—of the error depends on the attack mix, the detectors, and the sampling policy.
 
-and also receives the incumbent model's risk score.
+[^weighting]: The formula is a ratio of Horvitz–Thompson estimates of totals, sometimes called a Hájek-style estimator. Each total is unbiased under the sampling design when inclusion probabilities are positive and labels are correctly observed. Their ratio is generally not exactly unbiased, though it is consistent under standard regularity conditions. See [Statistics Canada's treatment of Horvitz–Thompson and Hájek estimators](https://www150.statcan.gc.ca/n1/pub/12-001-x/2016001/article/14540/03-eng.htm).
 
-The score is informative, so including it seems reasonable.
-
-But now the labeler is no longer independent of the detector being evaluated.
-
-In a simulation, exposing the score increases agreement with the incumbent:
-
-| | score hidden | score exposed |
-|---|---|---|
-| agreement with incumbent | 84.3% | 88.7% |
-| recall vs. truth | 73.5% | 69.4% |
-| recall on loud attacks | 92.7% | 93.9% |
-| recall on quiet attacks | 35.4% | 20.8% |
-
-Agreement improves.
-
-Actual coverage gets worse.
-
-The largest loss appears exactly where independent labeling is most valuable: attacks the incumbent already struggles to detect.
-
-This is not a failure of a poorly built model. It is what a careful reasoner does with an authoritative-looking number in front of it, which is why using a stronger model does not remove the effect.
-
-This also shows why **human–LLM agreement alone is not enough to validate a labeler**.
-
-Two labelers can agree because they share the same source of bias.
-
-The simulation makes that concrete. Measured on the incumbent-selected sample, the annotator agrees with the human labeler 88.0% of the time. Measured on the independent holdout, 87.9%. Its actual recall against truth across those two samples is 93.1% and 73.5%.
-
-Agreement does not move. The quantity it stands in for moves by a fifth.
-
-![Left: agreement holds steady across two samples while recall against truth does not. Center and right: exposing the incumbent score buys agreement with the incumbent and pays for it in the quiet segment.](figure_labelers.png)
-
-If the goal is independent evidence, hide the incumbent score.
-
-## What I would do in practice
-
-For a production detection system, I would start with four things.
-
-**1. Document label provenance.**
-For every positive label, record why it exists: which enforcement action surfaced it, which downstream signal confirmed it, and what had to happen for the event to become observable.
-
-**2. Measure performance by attack segment.**
-Aggregate recall can hide large coverage gaps. If the dataset cannot support meaningful segmentation, that itself is useful evidence about label coverage.
-
-**3. Create a small independent holdout.**
-Stratify it, cap exposure, add safety guardrails, and log the inclusion probability for every sampled event.
-
-**4. Keep incumbent scores out of independent labeling.**
-Especially when using LLM-assisted review. The purpose of an independent labeler is to add information, not reproduce the current model's belief.
-
-None of these requires a more sophisticated detector.
-
-They require treating **label generation as part of the ML system**.
-
-## Simulator
-
-The examples above are synthetic because production data rarely contains the latent truth needed to measure this bias directly.
-
-I built a small simulator that makes the full data-generating process observable:
-
-[github.com/qianrongwu/labels-are-estimators](https://github.com/qianrongwu/labels-are-estimators)
-
-It runs in about thirty seconds. The knobs worth turning are in `Config`.
-
-Push the two holdout rates apart and watch the weighted estimate stay centered while its interval widens.
-
-Raise the share of quiet attacks and watch the warehouse-label estimate grow more confident as it grows more wrong.
+[^interval]: The simulator takes 400 bootstrap resamples of the observed attacks in the audit and uses the 2.5th and 97.5th percentiles. This is an illustrative interval for the fixed candidate; it does not capture label errors, model training uncertainty, or changes in future traffic.

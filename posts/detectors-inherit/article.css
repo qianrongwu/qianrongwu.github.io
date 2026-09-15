@@ -1,0 +1,266 @@
+/* Article-specific typography; loaded only by this post. */
+:root {
+  --article-ink: #23333b;
+  --article-muted: #59666b;
+  --article-accent: #176b61;
+  --article-rule: #dbe2de;
+  --article-paper: #fcfbf8;
+}
+
+body {
+  color: var(--article-ink);
+  background: var(--article-paper);
+}
+
+#quarto-header .navbar {
+  background: var(--article-paper);
+  border-bottom: 1px solid var(--article-rule);
+}
+
+.quarto-title-banner {
+  background: var(--article-paper);
+  color: var(--article-ink);
+  padding-block: 3.4rem 1.6rem;
+}
+
+#title-block-header .title {
+  color: var(--article-ink);
+  max-width: 780px;
+  font-size: clamp(2.15rem, 4.2vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
+  text-wrap: balance;
+}
+
+#title-block-header .description {
+  max-width: 700px;
+  margin-top: 1.1rem;
+  color: var(--article-muted);
+  font-size: 1.15rem;
+  line-height: 1.55;
+}
+
+#title-block-header .quarto-categories {
+  margin-top: 1.2rem;
+  gap: 0.4rem;
+}
+
+#title-block-header .quarto-category {
+  border-color: var(--article-rule);
+  color: var(--article-muted);
+  letter-spacing: 0.035em;
+  opacity: 1;
+}
+
+#title-block-header .quarto-title-meta {
+  padding-bottom: 1.4rem;
+  border-bottom: 1px solid var(--article-rule);
+  color: var(--article-muted);
+}
+
+main.content {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.12rem;
+  line-height: 1.75;
+}
+
+main.content p {
+  margin-bottom: 1.25em;
+}
+
+main.content .lead {
+  font-size: 1.3rem;
+  line-height: 1.6;
+  font-weight: 400;
+}
+
+main.content h2,
+main.content h3,
+main.content table,
+main.content figcaption,
+.feedback-loop,
+main.content .footnotes {
+  font-family: var(--bs-font-sans-serif);
+}
+
+main.content h2 {
+  color: var(--article-ink);
+  margin-top: 2.8rem;
+  padding-bottom: 0.55rem;
+  border-bottom: 1px solid var(--article-rule);
+  font-size: 1.6rem;
+  font-weight: 650;
+  line-height: 1.3;
+  letter-spacing: -0.02em;
+  text-wrap: balance;
+}
+
+main.content h3 {
+  color: var(--article-ink);
+  margin-top: 2rem;
+  font-size: 1.2rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+main.content a:not(.anchorjs-link) {
+  color: var(--article-accent);
+  text-underline-offset: 0.18em;
+}
+
+main.content blockquote {
+  margin: 1.9rem 0;
+  padding: 0.2rem 0 0.2rem 1.25rem;
+  border-left: 3px solid var(--article-accent);
+  color: var(--article-ink);
+  font-size: 1.25rem;
+}
+
+main.content blockquote p:last-child {
+  margin-bottom: 0;
+}
+
+main.content li {
+  padding-left: 0.2rem;
+  margin-bottom: 0.65rem;
+}
+
+main.content li > p {
+  margin-bottom: 0.65rem;
+}
+
+.feedback-loop {
+  margin: 1.7rem 0;
+  padding: 1.1rem 1.2rem;
+  background: #edf3ef;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 1rem;
+}
+
+.feedback-loop p:last-child {
+  margin-bottom: 0;
+}
+
+main.content .quarto-figure {
+  margin: 1.9rem 0;
+}
+
+main.content .figure-img {
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--article-rule);
+  border-radius: 6px;
+  background: #fff;
+}
+
+main.content figcaption {
+  margin-top: 0.7rem;
+  color: var(--article-muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+  text-align: left;
+}
+
+main.content table {
+  width: 100%;
+  margin-block: 1.5rem;
+  font-size: 0.96rem;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+
+main.content table thead {
+  border-bottom: 2px solid var(--article-accent);
+}
+
+main.content table th,
+main.content table td {
+  padding: 0.7rem 0.65rem;
+  border-color: var(--article-rule);
+}
+
+main.content table tbody tr:last-child {
+  background: #edf3ef;
+}
+
+main.content mjx-container[display="true"] {
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.4rem;
+}
+
+#TOC {
+  font-size: 0.86rem;
+  line-height: 1.45;
+}
+
+#TOC .nav-link.active {
+  color: var(--article-accent);
+  border-left-color: var(--article-accent);
+}
+
+main.content .footnotes {
+  color: var(--article-muted);
+  font-size: 0.88rem;
+  line-height: 1.6;
+}
+
+@media (max-width: 767px) {
+  .quarto-title-banner {
+    padding-block: 2rem 1rem;
+  }
+
+  #title-block-header .description {
+    font-size: 1.05rem;
+  }
+
+  main.content {
+    font-size: 1.05rem;
+    line-height: 1.7;
+  }
+
+  main.content .lead {
+    font-size: 1.18rem;
+  }
+
+  main.content h2 {
+    font-size: 1.45rem;
+    margin-top: 2.3rem;
+  }
+
+  main.content blockquote {
+    font-size: 1.12rem;
+  }
+
+  main.content table {
+    font-size: 0.86rem;
+  }
+
+  main.content table th,
+  main.content table td {
+    padding: 0.55rem 0.35rem;
+  }
+}
+
+@media print {
+  body {
+    background: #fff;
+    color: #000;
+  }
+
+  .quarto-title-banner {
+    padding-block: 0.5rem;
+  }
+
+  main.content h2,
+  main.content h3 {
+    break-after: avoid;
+  }
+
+  main.content figure,
+  main.content table {
+    break-inside: avoid;
+  }
+}
