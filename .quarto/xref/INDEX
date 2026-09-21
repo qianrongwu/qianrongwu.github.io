@@ -19,5 +19,11 @@
   },
   "posts/detectors-inherit/index.qmd": {
     "index.html": "5596d096"
+  },
+  "posts/model-assisted-annotation/index.qmd": {
+    "index.html": "0f7fab8b"
+  },
+  "posts/entropy-budget/index.qmd": {
+    "index.html": "7ae5d978"
   }
 }

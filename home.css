@@ -1,0 +1,16 @@
+/* Home page only: keep the post list in a centered column on wide screens. */
+#quarto-content.page-layout-full,
+#title-block-header .quarto-title-banner {
+  padding-inline: max(1.5rem, calc((100vw - 1040px) / 2));
+}
+
+#quarto-content.page-layout-full main.content,
+#title-block-header .quarto-title-banner .quarto-title {
+  grid-column: 1 / -1;
+}
+
+/* Thumbnails stay inside their column. */
+.quarto-listing-default .thumbnail img {
+  max-width: 100%;
+  height: auto;
+}

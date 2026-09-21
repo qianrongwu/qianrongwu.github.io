@@ -1,0 +1,26 @@
+/* Keep wide equations and tables inside the article on small screens. */
+#quarto-document-content .math.display {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.25rem;
+}
+
+#quarto-document-content figure img {
+  max-width: 100%;
+  height: auto;
+}
+
+.cite-block {
+  margin-top: 2em;
+  padding: 0.75rem 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 6px;
+  background: #f8f9fa;
+  font-size: 0.9rem;
+}
+
+.cite-block p {
+  margin: 0;
+}

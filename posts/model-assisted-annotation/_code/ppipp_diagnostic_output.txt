@@ -1,0 +1,15 @@
+FP share 0.0: oracle lambda=0.861
+  oracle          mean error +0.016 pp (MC se 0.013)  coverage 94.6%
+  same_unclipped  mean error -0.230 pp (MC se 0.013)  coverage 93.8%
+  same_clipped    mean error -0.180 pp (MC se 0.013)  coverage 94.2%
+  crossfit        mean error +0.006 pp (MC se 0.014)  coverage 94.2%
+FP share 0.5: oracle lambda=0.619
+  oracle          mean error +0.007 pp (MC se 0.013)  coverage 94.8%
+  same_unclipped  mean error -0.117 pp (MC se 0.013)  coverage 94.4%
+  same_clipped    mean error -0.117 pp (MC se 0.013)  coverage 94.4%
+  crossfit        mean error +0.004 pp (MC se 0.013)  coverage 94.6%
+FP share 1.0: oracle lambda=0.619
+  oracle          mean error +0.009 pp (MC se 0.011)  coverage 94.8%
+  same_unclipped  mean error -0.066 pp (MC se 0.011)  coverage 94.3%
+  same_clipped    mean error -0.066 pp (MC se 0.011)  coverage 94.3%
+  crossfit        mean error +0.005 pp (MC se 0.011)  coverage 94.3%

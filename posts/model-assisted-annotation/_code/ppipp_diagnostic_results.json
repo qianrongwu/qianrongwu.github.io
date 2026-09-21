@@ -1,0 +1,86 @@
+{
+  "seed": 20260921,
+  "reps": 20000,
+  "n_human": 300,
+  "n_pool": 30000,
+  "settings": [
+    {
+      "fp_share": 0.0,
+      "oracle_lambda": 0.8609556607834699,
+      "variants": {
+        "oracle": {
+          "mean_error_pp": 0.016232673267327358,
+          "mc_se_pp": 0.013182940183362267,
+          "coverage_pct": 94.635
+        },
+        "same_unclipped": {
+          "mean_error_pp": -0.23026370067227853,
+          "mc_se_pp": 0.013471952889922442,
+          "coverage_pct": 93.755
+        },
+        "same_clipped": {
+          "mean_error_pp": -0.1803650784704819,
+          "mc_se_pp": 0.013283209382891749,
+          "coverage_pct": 94.165
+        },
+        "crossfit": {
+          "mean_error_pp": 0.006138452040088671,
+          "mc_se_pp": 0.013647802128949607,
+          "coverage_pct": 94.22
+        }
+      }
+    },
+    {
+      "fp_share": 0.5,
+      "oracle_lambda": 0.6188118811881187,
+      "variants": {
+        "oracle": {
+          "mean_error_pp": 0.007206188118810686,
+          "mc_se_pp": 0.012793434921974472,
+          "coverage_pct": 94.775
+        },
+        "same_unclipped": {
+          "mean_error_pp": -0.11723783483576777,
+          "mc_se_pp": 0.012845062340943058,
+          "coverage_pct": 94.405
+        },
+        "same_clipped": {
+          "mean_error_pp": -0.11723783483576777,
+          "mc_se_pp": 0.012845062340943058,
+          "coverage_pct": 94.405
+        },
+        "crossfit": {
+          "mean_error_pp": 0.004446521148568361,
+          "mc_se_pp": 0.012969274906440406,
+          "coverage_pct": 94.625
+        }
+      }
+    },
+    {
+      "fp_share": 1.0,
+      "oracle_lambda": 0.6188118811881189,
+      "variants": {
+        "oracle": {
+          "mean_error_pp": 0.008612582508249478,
+          "mc_se_pp": 0.011265447036124612,
+          "coverage_pct": 94.785
+        },
+        "same_unclipped": {
+          "mean_error_pp": -0.06626261283838863,
+          "mc_se_pp": 0.01128215036183245,
+          "coverage_pct": 94.34
+        },
+        "same_clipped": {
+          "mean_error_pp": -0.06626261283838863,
+          "mc_se_pp": 0.01128215036183245,
+          "coverage_pct": 94.34
+        },
+        "crossfit": {
+          "mean_error_pp": 0.004578799665597155,
+          "mc_se_pp": 0.011378156147972423,
+          "coverage_pct": 94.305
+        }
+      }
+    }
+  ]
+}
