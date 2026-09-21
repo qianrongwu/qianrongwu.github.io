@@ -1,0 +1,883 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.10.18">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+<meta name="dcterms.date" content="2026-09-21">
+<meta name="description" content="Task validation, structured judge errors, human routing, statistical correction, and the quality of the reference labels.">
+
+<title>Model-Assisted Annotation: From Labels to Reliable Estimates – Q’s Blog</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: 1.5em;}
+div.column{flex: auto;}
+@media screen {
+div.columns{gap: min(4vw, 1.5em);}
+div.column{overflow-x: auto;}
+}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-64a204ab8560d761af7679ceaba22944.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-445b8638c3d06994fee0907d791121c4.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "navbar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "end",
+  "type": "overlay",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@4/tex-chtml.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+<link rel="stylesheet" href="../../styles.css">
+<link rel="stylesheet" href="article.css">
+<meta property="og:title" content="Model-Assisted Annotation: From Labels to Reliable Estimates – Q’s Blog">
+<meta property="og:description" content="Task validation, structured judge errors, human routing, statistical correction, and the quality of the reference labels.">
+<meta property="og:image" content="https://qianrongwu.com/posts/model-assisted-annotation/fig_coverage_vs_bias.png">
+<meta property="og:site_name" content="Q’s Blog">
+<meta property="og:image:height" content="800">
+<meta property="og:image:width" content="1760">
+<meta name="twitter:title" content="Model-Assisted Annotation: From Labels to Reliable Estimates – Q’s Blog">
+<meta name="twitter:description" content="Task validation, structured judge errors, human routing, statistical correction, and the quality of the reference labels.">
+<meta name="twitter:image" content="https://qianrongwu.com/posts/model-assisted-annotation/fig_coverage_vs_bias.png">
+<meta name="twitter:image-height" content="800">
+<meta name="twitter:image-width" content="1760">
+<meta name="twitter:card" content="summary_large_image">
+</head>
+
+<body class="nav-fixed quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top quarto-banner">
+    <nav class="navbar navbar-expand-lg " data-bs-theme="dark">
+      <div class="navbar-container container-fluid">
+      <div class="navbar-brand-container mx-auto">
+    <a class="navbar-brand" href="../../index.html">
+    <span class="navbar-title">Q’s Blog</span>
+    </a>
+  </div>
+            <div id="quarto-search" class="" title="Search"></div>
+          <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse" aria-controls="navbarCollapse" role="menu" aria-expanded="false" aria-label="Toggle navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+  <span class="navbar-toggler-icon"></span>
+</button>
+          <div class="collapse navbar-collapse" id="navbarCollapse">
+            <ul class="navbar-nav navbar-nav-scroll ms-auto">
+  <li class="nav-item">
+    <a class="nav-link" href="../../about.html"> 
+<span class="menu-text">About</span></a>
+  </li>  
+</ul>
+          </div> <!-- /navcollapse -->
+            <div class="quarto-navbar-tools">
+</div>
+      </div> <!-- /container-fluid -->
+    </nav>
+</header>
+<!-- content -->
+<header id="title-block-header" class="quarto-title-block default page-columns page-full">
+  <div class="quarto-title-banner page-columns page-full">
+    <div class="quarto-title column-body">
+      <h1 class="title">Model-Assisted Annotation: From Labels to Reliable Estimates</h1>
+                  <div>
+        <div class="description">
+          Task validation, structured judge errors, human routing, statistical correction, and the quality of the reference labels.
+        </div>
+      </div>
+                          <div class="quarto-categories">
+                <div class="quarto-category">annotation</div>
+                <div class="quarto-category">evaluation</div>
+                <div class="quarto-category">llm-as-a-judge</div>
+                <div class="quarto-category">statistics</div>
+              </div>
+                  </div>
+  </div>
+    
+  
+  <div class="quarto-title-meta">
+
+      
+      <div>
+      <div class="quarto-title-meta-heading">Published</div>
+      <div class="quarto-title-meta-contents">
+        <p class="date">September 21, 2026</p>
+      </div>
+    </div>
+    
+      
+    </div>
+    
+  
+  </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article page-navbar">
+<!-- sidebar -->
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">In this article</h2>
+   
+  <ul class="collapse">
+  <li><a href="#task-specific-validation" id="toc-task-specific-validation" class="nav-link active" data-scroll-target="#task-specific-validation">Task-specific validation</a></li>
+  <li><a href="#structured-judge-errors" id="toc-structured-judge-errors" class="nav-link" data-scroll-target="#structured-judge-errors">Structured judge errors</a></li>
+  <li><a href="#routing-two-objectives" id="toc-routing-two-objectives" class="nav-link" data-scroll-target="#routing-two-objectives">Routing: two objectives</a></li>
+  <li><a href="#correction" id="toc-correction" class="nav-link" data-scroll-target="#correction">Correction</a></li>
+  <li><a href="#simulation" id="toc-simulation" class="nav-link" data-scroll-target="#simulation">Simulation</a></li>
+  <li><a href="#auditing-reference-labels" id="toc-auditing-reference-labels" class="nav-link" data-scroll-target="#auditing-reference-labels">Auditing reference labels</a></li>
+  <li><a href="#open-questions" id="toc-open-questions" class="nav-link" data-scroll-target="#open-questions">Open questions</a></li>
+  <li><a href="#references" id="toc-references" class="nav-link" data-scroll-target="#references">References</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content quarto-banner-title-block" id="quarto-document-content">
+
+
+
+
+
+<p>Model-assisted annotation serves several goals: assigning labels to individual items, training downstream models, and estimating population quantities. These uses need different checks. A model can do well on a classification benchmark and still produce a biased estimate of prevalence.</p>
+<p>Consider two classifiers that each make 120 errors on 1,000 items. One makes 60 false positives and 60 false negatives; the other makes 90 and 30. Both are 88% accurate, but their estimated prevalences differ from the reference prevalence by zero and by +6 percentage points. Classification error depends on the <em>sum</em> of the two error masses; prevalence error depends on their <em>difference</em>.</p>
+<p>This post organizes annotation around four stages: <strong>generate</strong> candidate labels, <strong>route</strong> items to an appropriate judge, <strong>correct</strong> estimates using human labels, and <strong>audit</strong> the reference labels themselves. The connection I care most about is between routing and correction: the rule that selects which items receive human review also determines what can be estimated from that review. The four-stage framing and that argument are my own reading of the literature. Claims about individual papers are attributed to them, and places where I go beyond a paper are marked.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="fig_control_loop.svg" class="img-fluid figure-img"></p>
+<figcaption><strong>Figure 1.</strong> Annotation as a control loop: label generation, routing, statistical correction, and audit, with feedback to the earlier stages.</figcaption>
+</figure>
+</div>
+<section id="task-specific-validation" class="level2">
+<h2 class="anchored" data-anchor-id="task-specific-validation">Task-specific validation</h2>
+<p>Annotation quality depends on the model, the data distribution, and the label definition together. Validation on one task is limited evidence for another, even when both use familiar categories such as toxicity or preference.</p>
+<p>Pangakis et al.&nbsp;[1] replicated 27 annotation tasks from social-science articles. Median accuracy was 0.85 and median F1 was 0.71, but precision or recall fell below 0.5 on nine of the tasks. Aggregate performance concealed large task-level variation, and the authors recommend validating on the exact task, dataset, and guideline in use.</p>
+<p>Prompting can move a model toward a task definition, and in the one study I know that measures how far, the movement was partial. In a toxicity-annotation study across nine models and five datasets, Casanova et al.&nbsp;[2] report an overall rescue rate of 34.8%: the share of zero-shot errors corrected by prompting, pooled over prompting conditions that include definitions which do not match the dataset’s own. The rate fell to 20.8% for errors made with confidence above 0.9. Supplying the matching definition raised accuracy by 2.2 points on average. Persistent disagreement calls for looking at the examples and the definition before choosing between more prompting, fine-tuning, or human annotation. Revising the definition is a legitimate option, with the caveat that it changes the measurement target.</p>
+</section>
+<section id="structured-judge-errors" class="level2">
+<h2 class="anchored" data-anchor-id="structured-judge-errors">Structured judge errors</h2>
+<p>Errors can depend systematically on features unrelated to the intended judgment. Two well-studied cases are candidate position and response length. One paper shows how to measure such a dependence without human labels; the other shows how to adjust for it once it has a name and a covariate.</p>
+<section id="position" class="level3">
+<h3 class="anchored" data-anchor-id="position">Position</h3>
+<p>Shi et al.&nbsp;[3] show the same candidates to a judge under swapped and permuted orders, for 15 judges and more than 150,000 judgments on MTBench and DevBench. They separate quantities that are often reported as one. <em>Repetition stability</em> asks whether the judge repeats its verdict on an identical prompt. <em>Position consistency</em> asks whether it chooses the same candidate after the candidates are permuted. A third metric, <em>preference fairness</em>, summarizes which way the order-dependence leans.</p>
+<p>Repeated judgments were generally stable, so the inconsistency under permutation is not sampling noise. Position consistency varied widely across judges, and it rose with the apparent quality gap between the answers being compared: close comparisons were the ones most sensitive to order.</p>
+<p>Swapping the order therefore gives a useful abstention signal. My reading is that this changes what the standard mitigation accomplishes. An inconsistent verdict identifies an order-sensitive comparison; it does not establish which candidate is better. Keeping only consistent verdicts converts close pairs into ties or abstentions, and escalating those pairs to people produces a review sample that was selected for being hard. That is the situation the routing section takes up.</p>
+</section>
+<section id="length" class="level3">
+<h3 class="anchored" data-anchor-id="length">Length</h3>
+<p>Dubois et al.&nbsp;[4] model the judge’s preference for model <span class="math inline">\(m\)</span> over baseline <span class="math inline">\(b\)</span> on instruction <span class="math inline">\(x\)</span> with a logistic regression whose linear predictor has three terms:</p>
+<p><span class="math display">\[
+\begin{aligned}
+\eta \;=\;&amp; \underbrace{\theta_m - \theta_b}_{\text{model}}
+\;+\; \underbrace{(\psi_m - \psi_b)\,\gamma_x}_{\text{instruction difficulty}} \\[4pt]
+&amp;+\; \underbrace{\phi_{m,b}\,\tanh\!\left(\frac{\operatorname{len}(z_m) - \operatorname{len}(z_b)}{\operatorname{std}(\operatorname{len}(z_m) - \operatorname{len}(z_b))}\right)}_{\text{length}} .
+\end{aligned}
+\]</span></p>
+<p>The length-controlled win rate is the model’s prediction with the length term set to zero, averaged over instructions. The form is chosen so that the result is still a win rate: a model against itself scores 50, and swapping the two models gives the complement.</p>
+<p>The length coefficient is weakly regularized, for a reason worth noticing. Without it, a model could be truncated on exactly the instructions it handles badly, and the regression would attribute those losses to shortness and adjust them away.</p>
+<p>Prompting the same model to be concise or verbose moved its raw win rate from 22.9% to 64.3%; the length-controlled figure moved from 41.9% to 51.6%, and Spearman correlation with Chatbot Arena rose from 0.94 to 0.98. The adjustment estimates preference at equal length. Its interpretation depends on treating length as a nuisance variable, and, as the authors say, it does nothing for biases that have not been modeled.</p>
+<p>Other documented cases include rubric-order effects in pointwise judging [5], preference leakage between related generator and judge models [6], and compression toward the middle of clinical ordinal scales [7]. These errors are structured, and more model labels do not guarantee that their effect on the quantity of interest disappears. They can cancel in one aggregate and distort another, as in the opening example, so their consequences have to be evaluated for the target quantity and cannot be read off overall accuracy.</p>
+</section>
+</section>
+<section id="routing-two-objectives" class="level2">
+<h2 class="anchored" data-anchor-id="routing-two-objectives">Routing: two objectives</h2>
+<p>Human review can improve the reliability of individual decisions, or the precision of a population estimate. The two objectives lead to different routing policies, and the difference matters later.</p>
+<section id="selective-judgment" class="level3">
+<h3 class="anchored" data-anchor-id="selective-judgment">Selective judgment</h3>
+<p>Jung et al.&nbsp;[8] start from a judge <span class="math inline">\(f_{\text{LM}}\)</span> with a confidence score <span class="math inline">\(c_{\text{LM}}\)</span> and let it answer only above a threshold <span class="math inline">\(\lambda\)</span>; otherwise it abstains. Given an acceptable disagreement rate <span class="math inline">\(\alpha\)</span> and a failure probability <span class="math inline">\(\delta\)</span>, the method looks for a threshold such that, with probability at least <span class="math inline">\(1-\delta\)</span> over the calibration sample,</p>
+<p><span class="math display">\[
+P\bigl(f_{\text{LM}}(x) = y_{\text{human}} \,\big|\, c_{\text{LM}}(x) \ge \lambda\bigr) \;\ge\; 1 - \alpha .
+\]</span></p>
+<p><em>How the threshold is chosen.</em> On human-labeled calibration data, compute the empirical disagreement rate among the items the judge would keep at threshold <span class="math inline">\(\lambda\)</span>, and an exact binomial upper confidence bound on it. Test thresholds in a prescribed order, from strict to loose, stop at the first one whose bound exceeds <span class="math inline">\(\alpha\)</span>, and use the last threshold that passed. Because the order is fixed in advance and the scan stops at the first failure, no multiple-testing correction is needed (fixed-sequence testing).</p>
+<p><em>A point that is easy to get backwards.</em> A stricter threshold may lower the true risk of the kept set, but it also leaves fewer calibration items with which to certify that risk. With no errors among five kept items, a one-sided 95% binomial upper bound on the risk is still about 45%; with thirty, it is about 9.5%. Coverage is therefore found from data. The guarantee, as proved in the paper, assumes the calibration items are an i.i.d. sample from the deployment distribution; it does not extend to a deployment distribution that has drifted.</p>
+<p><em>Where the confidence comes from.</em> The paper reports that token probabilities and verbalized confidence are poorly calibrated for this purpose. Its alternative, Simulated Annotators, calls the same model several times, each with a different set of few-shot examples standing in for a different human rater, and uses the agreement among the simulated raters as the confidence. With GPT-4-turbo on AlpacaEval this gives an expected calibration error of 0.095, against roughly 0.22 for the other two. A cascade then hands each item to the cheapest judge whose confidence clears its own calibrated threshold, and abstains if none does. On a Chatbot Arena subset where GPT-4 alone rarely reaches 80% human agreement, the authors report over 80% agreement at almost 80% coverage, with most kept items judged by smaller models.</p>
+<p>The guarantee concerns the kept set. It says nothing about the abstained items, which are the ones that go to people.</p>
+</section>
+<section id="sampling-for-estimation" class="level3">
+<h3 class="anchored" data-anchor-id="sampling-for-estimation">Sampling for estimation</h3>
+<p>Gligorić et al.&nbsp;[9] ask a different question. The goal is a population quantity with a valid interval: a prevalence, an odds ratio, a regression coefficient. Every item has an LLM annotation <span class="math inline">\(\hat H_i\)</span> and a verbalized confidence <span class="math inline">\(C_i\)</span>; a limited number can also receive a human annotation <span class="math inline">\(H_i\)</span>. The method chooses a <em>sampling rule</em> and not a threshold. For a mean, item <span class="math inline">\(i\)</span> is reviewed with probability</p>
+<p><span class="math display">\[
+\pi_i \;\propto\; \sqrt{\widehat{\text{err}}(C_i)}, \qquad \sum_{i}\pi_i = n_{\text{human}},
+\]</span></p>
+<p>where <span class="math inline">\(\widehat{\text{err}}(C)\)</span> predicts the squared model–human disagreement from the confidence score, and is refit in batches on the human labels collected so far.</p>
+<p><em>Why a square root.</em> For mean estimation, the variance contributed by an inverse-probability-weighted correction is, up to constants, <span class="math inline">\(\sum_i e_i^2/\pi_i\)</span>, with <span class="math inline">\(e_i^2\)</span> the expected squared residual of item <span class="math inline">\(i\)</span>. Minimizing it under a fixed budget <span class="math inline">\(\sum_i \pi_i\)</span> gives <span class="math inline">\(\pi_i \propto e_i\)</span>, the root mean squared residual, by the Cauchy–Schwarz inequality. The argument has the same form as Neyman allocation in survey sampling. For other targets the rule changes: for a regression coefficient, the paper multiplies by a term that reflects each item’s influence on the coefficient of interest.</p>
+<p>On three computational social science tasks with GPT-4o annotations, the authors report valid intervals with over 25% fewer human annotations than human-only estimation on each task, while intervals built from LLM annotations alone covered poorly.</p>
+</section>
+<section id="two-routers-one-signal" class="level3">
+<h3 class="anchored" data-anchor-id="two-routers-one-signal">Two routers, one signal</h3>
+<p>Both methods route on model confidence. They arrive at different policies because they optimize different things.</p>
+<table class="table-striped caption-top table">
+<caption><strong>Table 1.</strong> The comparison is mine.</caption>
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>Selective judgment [8]</th>
+<th>Sampling for estimation [9]</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Target</td>
+<td>Agreement with humans on the kept items</td>
+<td>Precision of a population estimate</td>
+</tr>
+<tr class="even">
+<td>Policy</td>
+<td>Deterministic: keep if confident, else escalate</td>
+<td>Randomized: review with known probability <span class="math inline">\(\pi_i\)</span></td>
+</tr>
+<tr class="odd">
+<td>Low-confidence items</td>
+<td>All escalated</td>
+<td>Reviewed more often</td>
+</tr>
+<tr class="even">
+<td>High-confidence items</td>
+<td>Never seen by a human</td>
+<td>Reviewed rarely, but with <span class="math inline">\(\pi_i &gt; 0\)</span></td>
+</tr>
+<tr class="odd">
+<td>The human labels are</td>
+<td>A selected sample of hard cases</td>
+<td>A probability sample with known weights</td>
+</tr>
+</tbody>
+</table>
+<p>The row I would underline is the fourth. A deterministic cascade never shows a person the cases the model is confident about, so it cannot detect confident errors, and in [2] high-confidence errors were the ones least often rescued by prompting. There is some evidence that they become more common under LLM supervision: in a hate-speech study discussed below [15], the share of classifier errors made with confidence above 0.90 rose from 2–14% with human training labels to 11–30% with GPT-5.2 labels. A production system can have both properties by running the cascade for decisions and adding a small random audit, with logged probabilities, over everything the cascade auto-accepts. The simulation below shows what is lost without it.</p>
+</section>
+</section>
+<section id="correction" class="level2">
+<h2 class="anchored" data-anchor-id="correction">Correction</h2>
+<p>Let <span class="math inline">\(f(X)\)</span> be a model prediction, <span class="math inline">\(Y\)</span> a human label, and <span class="math inline">\(\theta = \mathbb{E}[Y]\)</span> the target. Consider two independent samples from the same population: <span class="math inline">\(N\)</span> prediction-only items <span class="math inline">\(\tilde X_i\)</span> and <span class="math inline">\(n\)</span> labeled items <span class="math inline">\((X_j, Y_j)\)</span>, with the predictor fixed independently of these labels. The tempting estimator averages the model’s predictions. It is precise and, in general, centered on the wrong value.</p>
+<section id="prediction-powered-inference" class="level3">
+<h3 class="anchored" data-anchor-id="prediction-powered-inference">Prediction-powered inference</h3>
+<p>For a mean, PPI [10] adds a correction estimated from the human sample:</p>
+<p><span class="math display">\[
+\hat\theta_{\text{PPI}} \;=\; \underbrace{\frac{1}{N}\sum_{i=1}^{N} f(\tilde X_i)}_{\text{model predictions}} \;+\; \underbrace{\frac{1}{n}\sum_{j=1}^{n}\bigl(Y_j - f(X_j)\bigr)}_{\text{rectifier}} .
+\]</span></p>
+<p><em>Intuition.</em> The rectifier estimates the model’s average error and removes it. Nothing is assumed about the accuracy of <span class="math inline">\(f\)</span>.</p>
+<p><em>Consequence.</em> Under independent sampling the variance is <span class="math inline">\(\operatorname{Var}(f)/N + \operatorname{Var}(Y - f)/n\)</span>. When the first term is negligible, PPI is more precise than the human-only mean exactly when <span class="math inline">\(\operatorname{Var}(Y-f) &lt; \operatorname{Var}(Y)\)</span>. The predictor supplies efficiency; the human sample identifies the correction.</p>
+<p>PPI++ [11] adds a weight on the model term. (This <span class="math inline">\(\lambda\)</span> is a model weight, unrelated to the routing threshold above.)</p>
+<p><span class="math display">\[
+\hat\theta_{\lambda} \;=\; \frac{1}{n}\sum_{j=1}^{n} Y_j \;+\; \lambda\left(\frac{1}{N}\sum_{i=1}^{N} f(\tilde X_i) - \frac{1}{n}\sum_{j=1}^{n} f(X_j)\right),
+\]</span></p>
+<p>with the weight estimated as</p>
+<p><span class="math display">\[
+\hat\lambda = \frac{\widehat{\operatorname{Cov}}(Y, f)}{(1 + n/N)\,\widehat{\operatorname{Var}}(f)} .
+\]</span></p>
+<p>This is a control-variate estimator: <span class="math inline">\(\lambda = 1\)</span> recovers PPI and <span class="math inline">\(\lambda = 0\)</span> recovers the human-only mean, so an unhelpful predictor is down-weighted. The efficiency guarantee for the estimated weight is asymptotic.</p>
+</section>
+<section id="correction-under-selective-sampling" class="level3">
+<h3 class="anchored" data-anchor-id="correction-under-selective-sampling">Correction under selective sampling</h3>
+<p>The unweighted rectifier is biased when human review depends on model confidence. Design-based supervised learning [12] treats labeling as a sampling design. For a pool of <span class="math inline">\(N\)</span> items, let <span class="math inline">\(R_i\)</span> indicate human review and let <span class="math inline">\(\pi_i &gt; 0\)</span> be its known probability. In the mean case the idea reduces to a pseudo-outcome:</p>
+<p><span class="math display">\[
+\tilde Y_i \;=\; f(X_i) + \frac{R_i}{\pi_i}\bigl(Y_i - f(X_i)\bigr),
+\qquad
+\hat\theta_{\text{DSL}} = \frac{1}{N}\sum_{i=1}^{N}\tilde Y_i .
+\]</span></p>
+<p><em>Intuition.</em> The design expectation of <span class="math inline">\(R_i/\pi_i\)</span> is one, so the weighted residual is an unbiased correction whatever <span class="math inline">\(f\)</span> is, provided the predictions are fixed independently of the sampled labels. Readers from causal inference will recognize the augmented inverse-probability-weighted form with a known propensity; with <span class="math inline">\(f \equiv 0\)</span> it is the Horvitz–Thompson estimator I used in <a href="https://qianrongwu.com/posts/detectors-inherit/">an earlier post on selective labels</a>.</p>
+<p><em>Consequence.</em> Validity comes from the design and not from the model; the model affects only efficiency. Confidence-driven inference [9] is this estimator with <span class="math inline">\(\pi_i\)</span> chosen from model confidence and a tuned model weight. Setting that weight to zero gives a <em>weighted</em> human-only estimator under the same design. It protects against an unhelpful model; it does not by itself guarantee an improvement over uniform human sampling.</p>
+<p>Two qualifications. Known positive probabilities establish the point correction, not finite-sample coverage: normal-approximation intervals need a design-appropriate variance estimate and regularity conditions, and very small probabilities produce unstable weights. And a predictor fitted on the audit labels needs sample splitting or cross-fitting.</p>
+</section>
+</section>
+<section id="simulation" class="level2">
+<h2 class="anchored" data-anchor-id="simulation">Simulation</h2>
+<p>Two experiments look at error asymmetry and at selective review. Both estimate a prevalence with nominal 95% normal-approximation intervals, <span class="math inline">\(N = 30{,}000\)</span> model-labeled items, a human budget of 300, and 2,000 replications. The target in both is the population prevalence, not the realized mean of a pool. Code, seeds, data-generating processes, and saved outputs for both experiments and for the diagnostic below are in the <a href="https://github.com/qianrongwu/qianrongwu.github.io/tree/main/posts/model-assisted-annotation/_code">companion code folder</a>.</p>
+<section id="fixed-accuracy-varying-error-asymmetry" class="level3">
+<h3 class="anchored" data-anchor-id="fixed-accuracy-varying-error-asymmetry">Fixed accuracy, varying error asymmetry</h3>
+<p>Experiment A fixes prevalence at 20% and model accuracy at 88%, and varies only how the 12% of errors divide between false positives and false negatives. The 300 labeled items and the 30,000 prediction-only items are drawn independently, as in the PPI setup above.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="fig_coverage_vs_bias.svg" class="img-fluid figure-img"></p>
+<figcaption><strong>Figure 2.</strong> Experiment A. Coverage and mean interval width at fixed 88% accuracy, as the split between false-positive and false-negative errors varies.</figcaption>
+</figure>
+</div>
+<p>Model-only intervals are narrow, 0.6–1.1 percentage points (pp). Their coverage is about 95% at zero net bias, 43% at ±0.5 pp, and close to zero beyond ±1.2 pp.&nbsp;Fixed classification accuracy is compatible with anything from nominal to no coverage of the prevalence.</p>
+<p>PPI and PPI++ intervals are 13–31% narrower than the human-only baseline, and coverage stays near nominal: 93.9–95.9% for PPI and 93.4–95.2% for PPI++. This binary setting illustrates the mechanism; the size of the saving should not be expected to transfer to a new task.</p>
+<p>PPI++ shows a small negative mean error, about −0.1 pp against a standard error near 1.8 pp.&nbsp;A diagnostic with 20,000 replications per setting locates the cause. With the weight estimated on the same 300 labels used in the estimate, the mean error is −0.07 to −0.23 pp (Monte Carlo standard error about 0.013 pp). With an oracle weight, or a two-fold cross-fitted one, it is between 0.00 and +0.02 pp.&nbsp;Clipping the weight to <span class="math inline">\([0,1]\)</span> does not explain it. The effect is a finite-sample consequence of estimating the weight and the mean from the same labels, it is about a tenth of a standard error, and it has little influence on coverage.</p>
+</section>
+<section id="human-labels-selected-by-uncertainty" class="level3">
+<h3 class="anchored" data-anchor-id="human-labels-selected-by-uncertainty">Human labels selected by uncertainty</h3>
+<p>Experiment B uses a latent-score model in which the classifier over-predicts the positive class: prevalence 18.3%, accuracy 88.2%, model-only bias +2.9 pp.&nbsp;In each replication one pool of 30,000 is drawn, and each item is reviewed independently with probability proportional to the model’s uncertainty, floored at 0.2%, for an expected 300 human labels. This is a cruder rule than the square-root allocation above, which is enough for the point at hand. Intervals use the standard deviation of the pseudo-outcome divided by <span class="math inline">\(\sqrt{N}\)</span>. The uniform reference is the same estimator with <span class="math inline">\(\pi_i = 300/30{,}000\)</span> for every item.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="fig_routed_sampling.svg" class="img-fluid figure-img"></p>
+<figcaption><strong>Figure 3.</strong> Experiment B. Coverage, bias, and mean interval width when human labels are sampled by model uncertainty, with a uniform-sampling reference.</figcaption>
+</figure>
+</div>
+<p>Treating the routed sample as representative biases both the human-only estimate (+9.0 pp, 5% coverage) and the unweighted rectifier (−5.0 pp, 61% coverage). The routed sample has a more negative average residual than the population, so the unweighted correction subtracts too much.</p>
+<p>Using the known review probabilities brings the bias to zero and coverage to 96.1% in this run, with a mean interval width of 6.4 pp against 7.7 pp for uniform sampling at the same budget. Routing improves precision once the selection enters the estimator, and damages validity when it does not.</p>
+<p>My reading of this result is that routing and correction are coupled, and that the coupling is easy to miss because the two usually live in different parts of a pipeline, owned by different people. The design also needs support everywhere. If confident cases are never reviewed, <span class="math inline">\(\pi_i = 0\)</span> in that region, and no weighting can recover their errors without further assumptions. A random audit of auto-accepted traffic preserves the information that correction needs. It is the same holdout argument as in the selective-labels setting: a system can be measured only on what it lets through to a labeler.</p>
+<p><em>Limits.</em> One estimand (a mean), binary labels, stable data, one routing rule and one floor. The experiments also treat human labels as ground truth, which is an assumption outside the statistical guarantee.</p>
+</section>
+</section>
+<section id="auditing-reference-labels" class="level2">
+<h2 class="anchored" data-anchor-id="auditing-reference-labels">Auditing reference labels</h2>
+<p>Correction aligns an estimate with the human reference. Whether the result is a valid measurement still depends on what that reference represents. Much of the classical material here (rater agreement and aggregation, models of annotator disagreement, methods for finding mislabeled training examples) is covered in Lilian Weng’s <em>Thinking about High-Quality Human Data</em> [16], and I do not repeat it.</p>
+<p><em>Benchmark audits.</em> ReImageNet [13] reports that about 12% of the original ImageNet-1k labels are incorrect and a third of the images are multilabel; the corrected labels raised top-1 accuracy by up to 1.2 points for supervised models and by 5–6 points for multimodal LLMs, so the original benchmark did not penalize model classes equally. A human inspection of two logic benchmarks [14] found incorrect formalizations in 42.5% of the 275 FOLIO validation instances and 42% of the first 100 MALLS test instances; against the corrected references, the accuracy of three LLMs rose by 11 to 23 points.</p>
+<p><em>Reliability and validity.</em> Harvey et al.&nbsp;[17] describe annotation with the vocabulary of measurement theory: a concept is given an explicit definition, an instrument is built (schema, guidelines, interface, choice of annotators), labels are produced, and the result is interrogated for reliability, “whether a measurement can be repeated,” and validity, “whether a measurement is correct.” Inter-annotator agreement speaks to the first. Annotators, the authors note, “may agree with one another while systematically misinterpreting the concept.” The paper separates five sources of annotation issues that look the same in an agreement statistic:</p>
+<table class="table-striped caption-top table">
+<caption><strong>Table 2.</strong> Adapted from Table 3 of Harvey et al.&nbsp;[17].</caption>
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Source</th>
+<th>Definition (quoted)</th>
+<th>Response recommended by the paper</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Error</td>
+<td>“The annotator did not follow instructions”</td>
+<td>Retrain, give feedback, filter annotators</td>
+</tr>
+<tr class="even">
+<td>Ambiguity</td>
+<td>“There is not enough information in the annotation instructions to fully determine the annotation”</td>
+<td>Improve instructions, refine the schema</td>
+</tr>
+<tr class="odd">
+<td>Impossibility</td>
+<td>“There is not enough information in the data to fully determine the annotation”</td>
+<td>Re-process or filter the data</td>
+</tr>
+<tr class="even">
+<td>Subjectivity</td>
+<td>“The annotation depends on implicit values, beliefs, opinions, or assumptions”</td>
+<td>Improve instructions, refine the schema</td>
+</tr>
+<tr class="odd">
+<td>Identity</td>
+<td>“The identity of the annotator is not aligned with the desired annotator population”</td>
+<td>Filter annotators</td>
+</tr>
+</tbody>
+</table>
+<p>The same low agreement calls for different interventions depending on its source. Retraining addresses instruction-following errors and cannot supply missing context; removing disagreement may discard perspectives the task was meant to capture. Two of the paper’s recommendations are cheap: record the annotator’s certainty with the label, and allow an “impossible to annotate” response, which separates impossibility from ambiguity at collection time. Among validity checks, the annotation-specific reading of discriminant validity is that labels should not encode annotator-specific artifacts unrelated to the construct. Where the target is a distribution of judgments, identity-related variation can be part of the signal.</p>
+<p><em>A worked example.</em> Hakimi et al.&nbsp;[15] train hate-speech classifiers on German political TikTok comments with human or LLM labels. Human annotators answered two questions (does the comment refer to immigration, and is the portrayal negative) and agreed only moderately, with Krippendorff’s α between 0.43 and 0.49. In the first version of the paper the LLM received a single holistic prompt, and classifiers trained on its labels were strongly skewed toward false positives. In the current version the LLM gets the same two-question decomposition as the humans. At roughly one-tenth of the annotation cost, those labels give better macro-F1 than human labels on three of four encoders, and classifiers trained on them have false-positive to false-negative ratios of 1.86–2.37 (mean 2.15), against 1.86–2.74 (mean 2.13) under human supervision. The holistic prompt, kept as an ablation, gives 2.79–3.72.</p>
+<p>My reading is that the revision history makes the point better than either version alone. The ablation indicates that the interface accounts for part of the skew: with the same LLM, moving from the holistic prompt to the two-question decomposition brought the error balance close to the human one, on a task that is ambiguous and subjective to begin with. It does not show that the model contributes nothing. With the same decomposed interface, a second LLM in the study (Qwen3.5) still yields ratios of 2.79–3.39, and all LLM variants over-flag border-control content. The narrower conclusion is that the annotation interface is part of the measurement procedure and belongs in validation along with the model.</p>
+<p>Co-annotation adds one more dependency. People tend to adopt a model’s suggestion, so a reference sample collected with suggestions visible may reproduce the model’s errors, and the corrections of the previous section would inherit them. Independent audit judgments, recorded provenance, and versioned guidelines keep the reference assessable and revisable.</p>
+</section>
+<section id="open-questions" class="level2">
+<h2 class="anchored" data-anchor-id="open-questions">Open questions</h2>
+<p><strong>Calibration under shift.</strong> How quickly do selective guarantees deteriorate under deployment drift, and what evidence should trigger recalibration?</p>
+<p><strong>Audit allocation.</strong> How much random review of auto-accepted traffic is needed for useful intervals, especially for rare errors and small subgroups?</p>
+<p><strong>Disagreement as a target.</strong> A random response from a specified annotator population can itself define <span class="math inline">\(Y\)</span>, so correction does not require a unique true label per item. The harder questions are which population is targeted, how to divide a budget between more items and more raters, and how to account for dependence among repeated judgments.</p>
+<p><strong>Judges as reward.</strong> The structured errors above are studied for evaluation. The same judges increasingly act as verifiers and reward signals in reinforcement learning, where a systematic error is optimized against and not only reported. That is the subject of a later post.</p>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<ol type="1">
+<li>Pangakis, Wolken, and Fasching. <a href="https://arxiv.org/abs/2306.00176">Automated Annotation with Generative AI Requires Validation</a>. 2023.</li>
+<li>Casanova, Kocielnik, and Alvarez. <a href="https://arxiv.org/abs/2606.00467">On the Limits of LLM Adaptability: Impact of Model-Internalized Priors on Annotation Task Performance</a>. 2026.</li>
+<li>Shi, Ma, Liang, Diao, Ma, and Vosoughi. <a href="https://arxiv.org/abs/2406.07791">Judging the Judges: A Systematic Study of Position Bias in LLM-as-a-Judge</a>. 2024.</li>
+<li>Dubois, Galambosi, Liang, and Hashimoto. <a href="https://arxiv.org/abs/2404.04475">Length-Controlled AlpacaEval: A Simple Way to Debias Automatic Evaluators</a>. 2024.</li>
+<li>Xu, Hirasawa, Kozuno, and Ushiku. <a href="https://arxiv.org/abs/2602.02219">Am I More Pointwise or Pairwise? Revealing Position Bias in Rubric-Based LLM-as-a-Judge</a>. 2026.</li>
+<li>Li et al.&nbsp;<a href="https://arxiv.org/abs/2502.01534">Preference Leakage: A Contamination Problem in LLM-as-a-judge</a>. 2025.</li>
+<li>Zhang et al.&nbsp;<a href="https://arxiv.org/abs/2605.16386">Auditing Multimodal LLM Raters: Central Tendency Bias in Clinical Ordinal Scoring</a>. 2026.</li>
+<li>Jung, Brahman, and Choi. <a href="https://arxiv.org/abs/2407.18370">Trust or Escalate: LLM Judges with Provable Guarantees for Human Agreement</a>. 2024.</li>
+<li>Gligorić, Zrnic, Lee, Candès, and Jurafsky. <a href="https://arxiv.org/abs/2408.15204">Can Unconfident LLM Annotations Be Used for Confident Conclusions?</a> 2024.</li>
+<li>Angelopoulos, Bates, Fannjiang, Jordan, and Zrnic. <a href="https://arxiv.org/abs/2301.09633">Prediction-Powered Inference</a>. 2023.</li>
+<li>Angelopoulos, Duchi, and Zrnic. <a href="https://arxiv.org/abs/2311.01453">PPI++: Efficient Prediction-Powered Inference</a>. 2023.</li>
+<li>Egami, Hinck, Stewart, and Wei. <a href="https://arxiv.org/abs/2306.04746">Using Imperfect Surrogates for Downstream Inference: Design-based Supervised Learning for Social Science Applications of Large Language Models</a>. 2023.</li>
+<li>Volkov, Kisel, Mishkina, Janouskova, and Matas. <a href="https://arxiv.org/abs/2608.13783">Doomed to Re-Annotate, Forever: The ImageNet Story</a>. 2026.</li>
+<li>Brunello, Curaba, Geatti, Mignani, Montanari, and Saccomanno. <a href="https://arxiv.org/abs/2606.02837">Fixing FOLIO and MALLS: Verified Annotations and an LLM-assisted Framework to Focus Human Relabeling</a>. 2026 (v2).</li>
+<li>Hakimi, Hirlimann, Augenstein, and Schütze. <a href="https://arxiv.org/abs/2604.13899">Do We Still Need Humans in the Loop? Human vs.&nbsp;LLM Annotation in Active Learning for TikTok Hate Speech Detection</a>. 2026 (v5).</li>
+<li>Weng. <a href="https://lilianweng.github.io/posts/2024-02-05-human-data-quality/">Thinking about High-Quality Human Data</a>. Lil’Log, 2024.</li>
+<li>Harvey, Koenecke, and Kizilcec. <a href="https://arxiv.org/abs/2608.07297">Data Annotation as Measurement</a>. 2026.</li>
+</ol>
+<div class="cite-block">
+<p>Cited as: Wu, Qianrong. (Sep 2026). “Model-Assisted Annotation: From Labels to Reliable Estimates.” qianrongwu.com.</p>
+</div>
+
+
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/qianrongwu\.com");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

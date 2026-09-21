@@ -137,14 +137,14 @@ window.Quarto = {
 
 <link rel="stylesheet" href="styles.css">
 <link rel="alternate" type="application/rss+xml" title="Q's Blog" href="index.xml" data-external="1"><meta property="og:title" content="Welcome to Q’s blog! – Q’s Blog">
-<meta property="og:image" content="https://qianrongwu.com/posts/detectors-inherit/figure.png">
+<meta property="og:image" content="https://qianrongwu.com/posts/model-assisted-annotation/fig_coverage_vs_bias.png">
 <meta property="og:site_name" content="Q’s Blog">
-<meta property="og:image:height" content="1224">
-<meta property="og:image:width" content="1728">
+<meta property="og:image:height" content="800">
+<meta property="og:image:width" content="1760">
 <meta name="twitter:title" content="Welcome to Q’s blog! – Q’s Blog">
-<meta name="twitter:image" content="https://qianrongwu.com/posts/detectors-inherit/figure.png">
-<meta name="twitter:image-height" content="1224">
-<meta name="twitter:image-width" content="1728">
+<meta name="twitter:image" content="https://qianrongwu.com/posts/model-assisted-annotation/fig_coverage_vs_bias.png">
+<meta name="twitter:image-height" content="800">
+<meta name="twitter:image-width" content="1760">
 <meta name="twitter:card" content="summary_large_image">
 </head>
 
@@ -198,7 +198,7 @@ window.Quarto = {
 <!-- margin-sidebar -->
     <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
         
-    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(2)</span></div><div class="category" data-category="ZGFwbw==">dapo <span class="quarto-category-count">(1)</span></div><div class="category" data-category="ZGV0ZWN0aW9u">detection <span class="quarto-category-count">(1)</span></div><div class="category" data-category="ZW50cm9weQ==">entropy <span class="quarto-category-count">(1)</span></div><div class="category" data-category="Z3Jwbw==">grpo <span class="quarto-category-count">(1)</span></div><div class="category" data-category="Z3Nwbw==">gspo <span class="quarto-category-count">(1)</span></div><div class="category" data-category="bGFiZWw=">label <span class="quarto-category-count">(1)</span></div><div class="category" data-category="bGxt">llm <span class="quarto-category-count">(1)</span></div><div class="category" data-category="cG9zdC10cmFpbmluZw==">post-training <span class="quarto-category-count">(1)</span></div><div class="category" data-category="cmVpbmZvcmNlbWVudC1sZWFybmluZw==">reinforcement-learning <span class="quarto-category-count">(1)</span></div><div class="category" data-category="c2VjdXJpdHktbWw=">security-ml <span class="quarto-category-count">(1)</span></div><div class="category" data-category="dHJhaW5pbmctZGF0YQ==">training-data <span class="quarto-category-count">(1)</span></div></div></div>
+    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(3)</span></div><div class="category" data-category="YW5ub3RhdGlvbg==">annotation <span class="quarto-category-count">(1)</span></div><div class="category" data-category="ZGFwbw==">dapo <span class="quarto-category-count">(1)</span></div><div class="category" data-category="ZGV0ZWN0aW9u">detection <span class="quarto-category-count">(1)</span></div><div class="category" data-category="ZW50cm9weQ==">entropy <span class="quarto-category-count">(1)</span></div><div class="category" data-category="ZXZhbHVhdGlvbg==">evaluation <span class="quarto-category-count">(1)</span></div><div class="category" data-category="Z3Jwbw==">grpo <span class="quarto-category-count">(1)</span></div><div class="category" data-category="Z3Nwbw==">gspo <span class="quarto-category-count">(1)</span></div><div class="category" data-category="bGFiZWw=">label <span class="quarto-category-count">(1)</span></div><div class="category" data-category="bGxt">llm <span class="quarto-category-count">(1)</span></div><div class="category" data-category="bGxtLWFzLWEtanVkZ2U=">llm-as-a-judge <span class="quarto-category-count">(1)</span></div><div class="category" data-category="cG9zdC10cmFpbmluZw==">post-training <span class="quarto-category-count">(1)</span></div><div class="category" data-category="cmVpbmZvcmNlbWVudC1sZWFybmluZw==">reinforcement-learning <span class="quarto-category-count">(1)</span></div><div class="category" data-category="c2VjdXJpdHktbWw=">security-ml <span class="quarto-category-count">(1)</span></div><div class="category" data-category="c3RhdGlzdGljcw==">statistics <span class="quarto-category-count">(1)</span></div><div class="category" data-category="dHJhaW5pbmctZGF0YQ==">training-data <span class="quarto-category-count">(1)</span></div></div></div>
 <!-- main -->
 <main class="content quarto-banner-title-block column-page-left" id="quarto-document-content">
 
@@ -212,7 +212,40 @@ window.Quarto = {
 
 <div class="quarto-listing quarto-listing-container-default" id="listing-listing">
 <div class="list quarto-listing-default">
-<div class="quarto-post image-right" data-index="0" data-categories="cmVpbmZvcmNlbWVudC1sZWFybmluZyUyQ2xsbSUyQ3Bvc3QtdHJhaW5pbmclMkNncnBvJTJDZ3NwbyUyQ2RhcG8lMkNlbnRyb3B5" data-listing-date-sort="1788159600000" data-listing-file-modified-sort="1789448862650" data-listing-date-modified-sort="1789369200000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2236">
+<div class="quarto-post image-right" data-index="0" data-categories="YW5ub3RhdGlvbiUyQ2V2YWx1YXRpb24lMkNsbG0tYXMtYS1qdWRnZSUyQ3N0YXRpc3RpY3M=" data-listing-date-sort="1789974000000" data-listing-file-modified-sort="1790007311866" data-listing-date-modified-sort="NaN" data-listing-reading-time-sort="21" data-listing-word-count-sort="4088">
+<div class="thumbnail"><a href="./posts/model-assisted-annotation/index.html" class="no-external">
+
+<img loading="lazy" src="./posts/model-assisted-annotation/fig_coverage_vs_bias.png" class="thumbnail-image">
+
+</a></div>
+<div class="body">
+<h3 class="no-anchor listing-title">
+<a href="./posts/model-assisted-annotation/index.html" class="no-external">Model-Assisted Annotation: From Labels to Reliable Estimates</a>
+</h3>
+<div class="listing-categories">
+
+<div class="listing-category" onclick="window.quartoListingCategory('YW5ub3RhdGlvbg=='); return false;">annotation</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('ZXZhbHVhdGlvbg=='); return false;">evaluation</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('bGxtLWFzLWEtanVkZ2U='); return false;">llm-as-a-judge</div>
+
+<div class="listing-category" onclick="window.quartoListingCategory('c3RhdGlzdGljcw=='); return false;">statistics</div>
+
+</div>
+<div class="delink listing-description"><a href="./posts/model-assisted-annotation/index.html" class="no-external">
+<p>Task validation, structured judge errors, human routing, statistical correction, and the quality of the reference labels.</p>
+</a></div>
+</div>
+<div class="metadata">
+<a href="./posts/model-assisted-annotation/index.html" class="no-external">
+<div class="listing-date">
+Sep 21, 2026
+</div>
+</a>
+</div>
+</div>
+<div class="quarto-post image-right" data-index="1" data-categories="cmVpbmZvcmNlbWVudC1sZWFybmluZyUyQ2xsbSUyQ3Bvc3QtdHJhaW5pbmclMkNncnBvJTJDZ3NwbyUyQ2RhcG8lMkNlbnRyb3B5" data-listing-date-sort="1788159600000" data-listing-file-modified-sort="1789449012164" data-listing-date-modified-sort="1789369200000" data-listing-reading-time-sort="12" data-listing-word-count-sort="2236">
 <div class="thumbnail"><a href="./posts/entropy-budget/index.html" class="no-external">
 
 <div class="listing-item-img-placeholder card-img-top" >&nbsp;</div>
@@ -251,7 +284,7 @@ Aug 31, 2026
 </a>
 </div>
 </div>
-<div class="quarto-post image-right" data-index="1" data-categories="ZGV0ZWN0aW9uJTJDdHJhaW5pbmctZGF0YSUyQ3NlY3VyaXR5LW1sJTJDbGFiZWw=" data-listing-date-sort="1788073200000" data-listing-file-modified-sort="1789448687197" data-listing-date-modified-sort="1789369200000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2035">
+<div class="quarto-post image-right" data-index="2" data-categories="ZGV0ZWN0aW9uJTJDdHJhaW5pbmctZGF0YSUyQ3NlY3VyaXR5LW1sJTJDbGFiZWw=" data-listing-date-sort="1788073200000" data-listing-file-modified-sort="1789445663059" data-listing-date-modified-sort="1789369200000" data-listing-reading-time-sort="11" data-listing-word-count-sort="2035">
 <div class="thumbnail"><a href="./posts/detectors-inherit/index.html" class="no-external">
 
 <img loading="lazy" src="./posts/detectors-inherit/figure.png" class="thumbnail-image">

@@ -2,6 +2,7 @@
   {
     "listing": "/index.html",
     "items": [
+      "/posts/model-assisted-annotation/index.html",
       "/posts/entropy-budget/index.html",
       "/posts/detectors-inherit/index.html"
     ]
