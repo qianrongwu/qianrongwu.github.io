@@ -85,9 +85,9 @@ ul.task-list li input[type="checkbox"] {
     }
 
     const options = {
-      valueNames: ['listing-date','listing-title','listing-author','listing-image','listing-description','listing-categories',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
+      valueNames: ['listing-date','listing-title','listing-author','listing-image','listing-description',{ data: ['index'] },{ data: ['categories'] },{ data: ['listing-date-sort'] },{ data: ['listing-file-modified-sort'] }],
       
-      searchColumns: ["listing-date","listing-title","listing-author","listing-image","listing-description","listing-categories"],
+      searchColumns: ["listing-date","listing-title","listing-author","listing-image","listing-description"],
     };
 
     window['quarto-listings'] = window['quarto-listings'] || {};
@@ -179,13 +179,13 @@ window.Quarto = {
 <!-- content -->
 <header id="title-block-header" class="quarto-title-block default page-columns page-full">
   <div class="quarto-title-banner page-columns page-full">
-    <div class="quarto-title column-page-left">
+    <div class="quarto-title column-page">
       <h1 class="title">Welcome to Q’s blog!</h1>
                       </div>
   </div>
     
   
-  <div class="quarto-title-meta column-page-left">
+  <div class="quarto-title-meta column-page">
 
       
     
@@ -196,11 +196,11 @@ window.Quarto = {
   </header><div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-full page-navbar">
 <!-- sidebar -->
 <!-- margin-sidebar -->
-    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar zindex-bottom">
         
-    <h5 class="quarto-listing-category-title">Categories</h5><div class="quarto-listing-category category-default"><div class="category" data-category="">All <span class="quarto-category-count">(3)</span></div><div class="category" data-category="YW5ub3RhdGlvbg==">annotation <span class="quarto-category-count">(1)</span></div><div class="category" data-category="ZGFwbw==">dapo <span class="quarto-category-count">(1)</span></div><div class="category" data-category="ZGV0ZWN0aW9u">detection <span class="quarto-category-count">(1)</span></div><div class="category" data-category="ZW50cm9weQ==">entropy <span class="quarto-category-count">(1)</span></div><div class="category" data-category="ZXZhbHVhdGlvbg==">evaluation <span class="quarto-category-count">(1)</span></div><div class="category" data-category="Z3Jwbw==">grpo <span class="quarto-category-count">(1)</span></div><div class="category" data-category="Z3Nwbw==">gspo <span class="quarto-category-count">(1)</span></div><div class="category" data-category="bGFiZWw=">label <span class="quarto-category-count">(1)</span></div><div class="category" data-category="bGxt">llm <span class="quarto-category-count">(1)</span></div><div class="category" data-category="bGxtLWFzLWEtanVkZ2U=">llm-as-a-judge <span class="quarto-category-count">(1)</span></div><div class="category" data-category="cG9zdC10cmFpbmluZw==">post-training <span class="quarto-category-count">(1)</span></div><div class="category" data-category="cmVpbmZvcmNlbWVudC1sZWFybmluZw==">reinforcement-learning <span class="quarto-category-count">(1)</span></div><div class="category" data-category="c2VjdXJpdHktbWw=">security-ml <span class="quarto-category-count">(1)</span></div><div class="category" data-category="c3RhdGlzdGljcw==">statistics <span class="quarto-category-count">(1)</span></div><div class="category" data-category="dHJhaW5pbmctZGF0YQ==">training-data <span class="quarto-category-count">(1)</span></div></div></div>
+    </div>
 <!-- main -->
-<main class="content quarto-banner-title-block column-page-left" id="quarto-document-content">
+<main class="content quarto-banner-title-block column-page" id="quarto-document-content">
 
 
 
@@ -222,17 +222,6 @@ window.Quarto = {
 <h3 class="no-anchor listing-title">
 <a href="./posts/model-assisted-annotation/index.html" class="no-external">Model-Assisted Annotation: From Labels to Reliable Estimates</a>
 </h3>
-<div class="listing-categories">
-
-<div class="listing-category" onclick="window.quartoListingCategory('YW5ub3RhdGlvbg=='); return false;">annotation</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('ZXZhbHVhdGlvbg=='); return false;">evaluation</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('bGxtLWFzLWEtanVkZ2U='); return false;">llm-as-a-judge</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('c3RhdGlzdGljcw=='); return false;">statistics</div>
-
-</div>
 <div class="delink listing-description"><a href="./posts/model-assisted-annotation/index.html" class="no-external">
 <p>Task validation, structured judge errors, human routing, statistical correction, and the quality of the reference labels.</p>
 </a></div>
@@ -255,23 +244,6 @@ Sep 21, 2026
 <h3 class="no-anchor listing-title">
 <a href="./posts/entropy-budget/index.html" class="no-external">Entropy as a Budget: A Map of GRPO, DAPO, and GSPO</a>
 </h3>
-<div class="listing-categories">
-
-<div class="listing-category" onclick="window.quartoListingCategory('cmVpbmZvcmNlbWVudC1sZWFybmluZw=='); return false;">reinforcement-learning</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('bGxt'); return false;">llm</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('cG9zdC10cmFpbmluZw=='); return false;">post-training</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('Z3Jwbw=='); return false;">grpo</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('Z3Nwbw=='); return false;">gspo</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('ZGFwbw=='); return false;">dapo</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('ZW50cm9weQ=='); return false;">entropy</div>
-
-</div>
 <div class="delink listing-description"><a href="./posts/entropy-budget/index.html" class="no-external">
 <p>A practical map of how GRPO-family methods estimate advantages, constrain policy updates, and balance reward improvement with continued exploration.</p>
 </a></div>
@@ -294,17 +266,6 @@ Aug 31, 2026
 <h3 class="no-anchor listing-title">
 <a href="./posts/detectors-inherit/index.html" class="no-external">How Detectors Inherit Their Blind Spots</a>
 </h3>
-<div class="listing-categories">
-
-<div class="listing-category" onclick="window.quartoListingCategory('ZGV0ZWN0aW9u'); return false;">detection</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('dHJhaW5pbmctZGF0YQ=='); return false;">training-data</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('c2VjdXJpdHktbWw='); return false;">security-ml</div>
-
-<div class="listing-category" onclick="window.quartoListingCategory('bGFiZWw='); return false;">label</div>
-
-</div>
 <div class="delink listing-description"><a href="./posts/detectors-inherit/index.html" class="no-external">
 <p>When a detector decides what gets investigated, it shapes the labels used to train and evaluate its successor.</p>
 </a></div>
