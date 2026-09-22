@@ -180,7 +180,7 @@ window.Quarto = {
       <div>
       <div class="quarto-title-meta-heading">Modified</div>
       <div class="quarto-title-meta-contents">
-        <p class="date-modified">September 14, 2026</p>
+        <p class="date-modified">September 21, 2026</p>
       </div>
     </div>
       
@@ -254,7 +254,7 @@ A_i=\frac{R_i-\bar R}{\sigma_R+\delta},
 \qquad
 \bar R=\frac{1}{G}\sum_{j=1}^{G}R_j,
 \]</span></p>
-<p>where <span class="math inline">\(\sigma_R\)</span> is the group reward standard deviation and <span class="math inline">\(\delta&gt;0\)</span> guards against division by zero. In this outcome-supervised version, the same <span class="math inline">\(A_i\)</span> is used for every token in response <span class="math inline">\(i\)</span>. The original objective retains token ratios and clipping, averages tokens within each response, and includes a Kullback–Leibler (KL) divergence penalty relative to a reference policy. <a href="https://arxiv.org/html/2402.03300v3#S4.SS1">DeepSeekMath, §4.1</a></p>
+<p>where <span class="math inline">\(\sigma_R\)</span> is the group reward standard deviation and <span class="math inline">\(\delta&gt;0\)</span> guards against division by zero. In this outcome-supervised version, the same <span class="math inline">\(A_i\)</span> is used for every token in response <span class="math inline">\(i\)</span>. The original objective retains token ratios and clipping, averages tokens within each response, and includes a Kullback–Leibler (KL) divergence penalty relative to a reference policy. <a href="https://arxiv.org/html/2402.03300v3#S4.SS1">DeepSeekMath, Section 4.1</a></p>
 <p>Removing the critic saves resources; the total memory saving depends on the training stack. The group mean is a sampled baseline, not the exact expected reward for that prompt. GRPO was subsequently used in DeepSeek-R1’s RL training. <a href="https://arxiv.org/abs/2501.12948v1">DeepSeek-R1</a></p>
 <p>A sequence-level reward can naturally weight token gradients. The score-function identity gives</p>
 <p><span class="math display">\[
@@ -275,7 +275,7 @@ h_\theta(s)=-\sum_{v\in\mathcal V}\pi_\theta(v\mid s)\log\pi_\theta(v\mid s).
 <p><span class="math display">\[
 R_{\mathrm{val}}\approx-ae^H+b.
 \]</span></p>
-<p>Early observations predict later performance in their experiments. The authors also explicitly discuss settings with different entropy dynamics. The fitted endpoint <span class="math inline">\(b-a\)</span> is therefore a conditional extrapolation, not a universal ceiling on what RL can learn. <a href="https://arxiv.org/html/2505.22617v1#S2.SS4">Cui et al., §§2.4–2.6</a></p>
+<p>Early observations predict later performance in their experiments. The authors also explicitly discuss settings with different entropy dynamics. The fitted endpoint <span class="math inline">\(b-a\)</span> is therefore a conditional extrapolation, not a universal ceiling on what RL can learn. <a href="https://arxiv.org/html/2505.22617v1#S2.SS4">Cui et al., Sections 2.4–2.6</a></p>
 <p>For an intuition about the direction of entropy change, consider a deliberately simple update at one fixed prefix. Hold advantage scores <span class="math inline">\(A(v)\)</span> fixed and reweight probabilities as</p>
 <p><span class="math display">\[
 p_\eta(v)=\frac{p(v)e^{\eta A(v)}}{\sum_u p(u)e^{\eta A(u)}}.
@@ -286,8 +286,8 @@ p_\eta(v)=\frac{p(v)e^{\eta A(v)}}{\sum_u p(u)e^{\eta A(u)}}.
 =-\operatorname{Cov}_{v\sim p}\!\left(\log p(v),A(v)\right).
 \]</span></p>
 <p>If already-probable actions tend to receive higher advantages, this update reduces entropy. If rare actions receive higher advantages, it can increase entropy. The sign depends on what is rewarded.</p>
-<p>This calculation describes an idealized multiplicative update at a fixed prefix. Cui et al.’s tabular analysis distinguishes vanilla policy gradient, involving <span class="math inline">\(\operatorname{Cov}(\log\pi,\pi A)\)</span>, from natural policy gradient, involving <span class="math inline">\(\operatorname{Cov}(\log\pi,A)\)</span>. The observed tendency toward positive covariance does not imply monotonic entropy decline for every optimizer and training recipe. <a href="https://arxiv.org/html/2505.22617v1#S3">Cui et al., §3</a></p>
-<p>The same work introduces Clip-Cov and KL-Cov, which target selected tokens’ contributions through gradient suppression or KL regularization. These methods explicitly address entropy dynamics. <a href="https://arxiv.org/html/2505.22617v1#S4">Cui et al., §4</a></p>
+<p>This calculation describes an idealized multiplicative update at a fixed prefix. Cui et al.’s tabular analysis distinguishes vanilla policy gradient, involving <span class="math inline">\(\operatorname{Cov}(\log\pi,\pi A)\)</span>, from natural policy gradient, involving <span class="math inline">\(\operatorname{Cov}(\log\pi,A)\)</span>. The observed tendency toward positive covariance does not imply monotonic entropy decline for every optimizer and training recipe. <a href="https://arxiv.org/html/2505.22617v1#S3">Cui et al., Section 3</a></p>
+<p>The same work introduces Clip-Cov and KL-Cov, which target selected tokens’ contributions through gradient suppression or KL regularization. These methods explicitly address entropy dynamics. <a href="https://arxiv.org/html/2505.22617v1#S4">Cui et al., Section 4</a></p>
 <p>Reinforcement can therefore concentrate probability on strategies that already work, making alternatives harder to encounter. For the exploration objective discussed here, entropy increases matter when they improve access to useful behaviors.</p>
 </section>
 <section id="dapo-several-practical-interventions" class="level2">
@@ -299,10 +299,10 @@ p_\eta(v)=\frac{p(v)e^{\eta A(v)}}{\sum_u p(u)e^{\eta A(u)}}.
 <li><strong>Token-level loss:</strong> average over tokens, giving longer responses more total weight than per-response averaging does.</li>
 <li><strong>Overlong reward shaping:</strong> the paper evaluates masking truncated samples’ losses and introduces a soft length penalty near the generation limit to reduce truncation-related reward noise.</li>
 </ul>
-<p>DAPO also removes the reference-policy KL term. Its Clip-Higher ablation shows higher policy entropy and more diverse samples. <a href="https://arxiv.org/html/2503.14476v2#S3">Yu et al., §§2.3–3.4</a></p>
+<p>DAPO also removes the reference-policy KL term. Its Clip-Higher ablation shows higher policy entropy and more diverse samples. <a href="https://arxiv.org/html/2503.14476v2#S3">Yu et al., Sections 2.3–3.4</a></p>
 <p>The effect of the upper clipping threshold depends on the token’s initial probability. With an upper ratio of <span class="math inline">\(1.2\)</span>, a positively advantaged token starting at probability <span class="math inline">\(0.01\)</span> reaches the surrogate’s flat region at <span class="math inline">\(0.012\)</span>. A token starting at <span class="math inline">\(0.9\)</span> cannot reach the corresponding <span class="math inline">\(1.08\)</span> boundary. The same relative threshold leaves very different room for absolute probability growth.</p>
 <p>Clipping does not enforce a hard probability cap: other samples and shared parameters can still move a clipped token’s probability. Nor is every rare token a useful exploration step. Clip-Higher gives rewarded rare tokens more room; it does not identify why a response succeeded.</p>
-<p>The paper reports 50% on AIME 2024 with Qwen2.5-32B, averaging accuracy over 32 repetitions. That is avg@32, not pass@32. Its reported reduction in update steps should not be read as an equal reduction in total compute. <a href="https://arxiv.org/html/2503.14476v2#S4">DAPO, §4</a></p>
+<p>The paper reports 50% on AIME 2024 with Qwen2.5-32B, averaging accuracy over 32 repetitions. That is avg@32, not pass@32. Its reported reduction in update steps should not be read as an equal reduction in total compute. <a href="https://arxiv.org/html/2503.14476v2#S4">DAPO, Section 4</a></p>
 <p>These interventions address distinct issues: diversity, informative batches, length weighting, and reward noise. Clip-Higher directly targets the exploration concern; the other changes also affect how training data contributes to the update.</p>
 </section>
 <section id="gspo-one-ratio-weight-per-response" class="level2">
@@ -323,7 +323,7 @@ s_i(\theta)=\rho_i(\theta)^{1/T_i}
 \min\!\left(s_iA_i,
 \operatorname{clip}(s_i,1-\varepsilon_{\mathrm{low}},1+\varepsilon_{\mathrm{high}})A_i\right).
 \]</span></p>
-<p>Length normalization controls the scale of the weight, but <span class="math inline">\(s_i\)</span> is a surrogate weight: the exact change-of-measure ratio is <span class="math inline">\(\rho_i\)</span>. The paper uses much tighter clipping widths for this different quantity. <a href="https://arxiv.org/html/2507.18071v2#S4">Zheng et al., §§4–5</a></p>
+<p>Length normalization controls the scale of the weight, but <span class="math inline">\(s_i\)</span> is a surrogate weight: the exact change-of-measure ratio is <span class="math inline">\(\rho_i\)</span>. The paper uses much tighter clipping widths for this different quantity. <a href="https://arxiv.org/html/2507.18071v2#S4">Zheng et al., Sections 4–5</a></p>
 <p>Ignoring clipping, differentiating a response’s contribution gives</p>
 <p><span class="math display">\[
 \nabla_\theta(s_iA_i)
@@ -331,7 +331,7 @@ s_i(\theta)=\rho_i(\theta)^{1/T_i}
 \]</span></p>
 <p>with the sampled advantage held fixed. Every token score gradient receives the same response-level ratio weight. GRPO instead weights each one by its own token ratio.</p>
 <p>For positive <span class="math inline">\(A_i\)</span>, the surrogate becomes flat above the upper boundary; for negative <span class="math inline">\(A_i\)</span>, it becomes flat below the lower boundary. In those cases, that response contributes no policy-surrogate gradient. Being outside the interval in the opposite direction does not remove its gradient. Sequence clipping is therefore not simply an accept/reject rule for all out-of-range responses.</p>
-<p>The paper reports improved training stability and efficiency, including mixture-of-experts (MoE) training without Routing Replay, which reuses the old policy’s expert selections during updates. The reported roughly 10% change in activated experts concerns a particular Qwen3-30B-A3B setup, not a universal rate for every MoE token. <a href="https://arxiv.org/html/2507.18071v2#S5.SS3">GSPO, §5.3</a></p>
+<p>The paper reports improved training stability and efficiency, including mixture-of-experts (MoE) training without Routing Replay, which reuses the old policy’s expert selections during updates. The reported roughly 10% change in activated experts concerns a particular Qwen3-30B-A3B setup, not a universal rate for every MoE token. <a href="https://arxiv.org/html/2507.18071v2#S5.SS3">GSPO, Section 5.3</a></p>
 <p>The paper does not establish an entropy-preservation result. Averaging log ratios also does not guarantee that local changes are small. For example, token ratios <span class="math inline">\(2\)</span> and <span class="math inline">\(1/2\)</span> produce <span class="math inline">\(s_i=1\)</span>: substantial opposing changes can cancel in the aggregate.</p>
 <p>GSPO’s effect on useful diversity requires separate evaluation from its gains in update stability. The shared response advantage still leaves token-level credit assignment unresolved.</p>
 </section>
@@ -392,21 +392,21 @@ s_i(\theta)=\rho_i(\theta)^{1/T_i}
 </section>
 <section id="why-pass1-is-not-enough" class="level2">
 <h2 class="anchored" data-anchor-id="why-pass1-is-not-enough">Why pass@1 is not enough</h2>
-<p>Yue et al.&nbsp;find that, for the models and RLVR recipes they evaluate, gains at small sampling budgets can coexist with worse coverage at large budgets. Their later revision also tests matching the RL model’s output entropy to the base model’s by adjusting temperature; a pass@k gap remains. Reduced entropy alone does not explain the observed narrowing. <a href="https://arxiv.org/html/2504.13837v5#S4.SS5">Yue et al., §§3–4.5</a></p>
+<p>Yue et al.&nbsp;find that, for the models and RLVR recipes they evaluate, gains at small sampling budgets can coexist with worse coverage at large budgets. Their later revision also tests matching the RL model’s output entropy to the base model’s by adjusting temperature; a pass@k gap remains. Reduced entropy alone does not explain the observed narrowing. <a href="https://arxiv.org/html/2504.13837v5#S4.SS5">Yue et al., Sections 3–4.5</a></p>
 <p>For a prompt with independent-sample success probability <span class="math inline">\(p_x\)</span>,</p>
 <p><span class="math display">\[
 \operatorname{pass@}k(x)=1-(1-p_x)^k.
 \]</span></p>
 <p>Across prompts, raising already-high success probabilities while lowering small ones can improve average pass@1 and reduce large-<span class="math inline">\(k\)</span> coverage. No capability has to become literally impossible to sample for this trade-off to matter in practice.</p>
-<p>Finite-<span class="math inline">\(k\)</span> measurements describe what is reachable under a sampling budget and evaluation protocol. They cannot prove that RL never learns a new reasoning behavior. ProRL, for example, reports gains at both low and high <span class="math inline">\(k\)</span> in some domains, starting from an already-distilled reasoning checkpoint and using a different training recipe. <a href="https://arxiv.org/html/2505.24864v1#S4.SS2">Liu et al., §4.2</a></p>
+<p>Finite-<span class="math inline">\(k\)</span> measurements describe what is reachable under a sampling budget and evaluation protocol. They cannot prove that RL never learns a new reasoning behavior. ProRL, for example, reports gains at both low and high <span class="math inline">\(k\)</span> in some domains, starting from an already-distilled reasoning checkpoint and using a different training recipe. <a href="https://arxiv.org/html/2505.24864v1#S4.SS2">Liu et al., Section 4.2</a></p>
 <p>Pass@k also assumes a way to recognize a successful sample. It is not the accuracy of a system that must select an answer without a verifier.</p>
 <p>Evaluation should track both single-sample performance and coverage across several sampling budgets, with prompts and decoding settings controlled. Entropy adds context to those measurements. It does not replace them.</p>
 </section>
 <section id="a-systems-caveat-which-policy-generated-the-data" class="level2">
 <h2 class="anchored" data-anchor-id="a-systems-caveat-which-policy-generated-the-data">A systems caveat: which policy generated the data?</h2>
 <p>Policy drift is only one reason training and rollout probabilities can disagree. Different engines can assign different probabilities to the same tokens even with the same weights.</p>
-<p>Qi et al.&nbsp;find that switching both rollout inference and mixed-precision training from BF16 to FP16 substantially reduces this mismatch in their experiments. FP16 has 10 fraction bits versus BF16’s 7: eightfold finer spacing within the same normal exponent interval, with a narrower numerical range. This is mixed-precision training, not a prescription to cast every tensor to FP16. <a href="https://arxiv.org/html/2510.26788v1#S3">Qi et al., §§3–4</a></p>
-<p>In their filtered-MATH test with DeepSeek-R1-Distill-Qwen-1.5B, a simple importance-weighted policy-gradient method in FP16 outperforms BF16 baselines, and algorithm differences narrow under FP16. Broader experiments support the precision benefit, without establishing FP16 as universally preferable. <a href="https://arxiv.org/html/2510.26788v1#S4">Qi et al., §§4–6</a></p>
+<p>Qi et al.&nbsp;find that switching both rollout inference and mixed-precision training from BF16 to FP16 substantially reduces this mismatch in their experiments. FP16 has 10 fraction bits versus BF16’s 7: eightfold finer spacing within the same normal exponent interval, with a narrower numerical range. This is mixed-precision training, not a prescription to cast every tensor to FP16. <a href="https://arxiv.org/html/2510.26788v1#S3">Qi et al., Sections 3–4</a></p>
+<p>In their filtered-MATH test with DeepSeek-R1-Distill-Qwen-1.5B, a simple importance-weighted policy-gradient method in FP16 outperforms BF16 baselines, and algorithm differences narrow under FP16. Broader experiments support the precision benefit, without establishing FP16 as universally preferable. <a href="https://arxiv.org/html/2510.26788v1#S4">Qi et al., Sections 4–6</a></p>
 <p>This distinction matters when interpreting likelihood ratios: changes caused by learning and disagreement introduced by training and sampling systems can both affect the measured ratio.</p>
 </section>
 <section id="implications-for-agents" class="level2">
