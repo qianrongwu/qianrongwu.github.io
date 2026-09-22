@@ -26,7 +26,7 @@ Annotation quality depends on the model, the data distribution, and the label de
 
 Pangakis et al. [1] replicated 27 annotation tasks from social-science articles. Median accuracy was 0.85 and median F1 was 0.71, but precision or recall fell below 0.5 on nine of the tasks. Aggregate performance concealed large task-level variation, and the authors recommend validating on the exact task, dataset, and guideline in use.
 
-Prompting can move a model toward a task definition, and in the one study I know that measures how far, the movement was partial. In a toxicity-annotation study across nine models and five datasets, Casanova et al. [2] report an overall rescue rate of 34.8%: the share of zero-shot errors corrected by prompting, pooled over prompting conditions that include definitions which do not match the dataset's own. The rate fell to 20.8% for errors made with confidence above 0.9. Supplying the matching definition raised accuracy by 2.2 points on average. Persistent disagreement calls for looking at the examples and the definition before choosing between more prompting, fine-tuning, or human annotation. Revising the definition is a legitimate option, with the caveat that it changes the measurement target.
+Prompting can move a model toward a task definition, and in the one study I know that measures how far, the movement was partial. In a toxicity-annotation study across nine models and five datasets, Casanova et al. [2] report an overall rescue rate of 34.8%: the share of zero-shot errors corrected by prompting, pooled over prompting conditions that include definitions which do not match the dataset's own. The rate fell to 20.8% for errors made with confidence above 0.9. With the matching definition supplied, mean accuracy across all nine models rose from 80.3% in the zero-shot condition to 82.0%, a gain of 1.7 percentage points. Persistent disagreement calls for looking at the examples and the definition before choosing between more prompting, fine-tuning, or human annotation. Revising the definition is a legitimate option, with the caveat that it changes the measurement target.
 
 ## Structured judge errors
 
@@ -241,7 +241,3 @@ Co-annotation adds one more dependency. People tend to adopt a model's suggestio
 15. Hakimi, Hirlimann, Augenstein, and Schütze. [Do We Still Need Humans in the Loop? Human vs. LLM Annotation in Active Learning for TikTok Hate Speech Detection](https://arxiv.org/abs/2604.13899). 2026 (v5).
 16. Weng. [Thinking about High-Quality Human Data](https://lilianweng.github.io/posts/2024-02-05-human-data-quality/). Lil'Log, 2024.
 17. Harvey, Koenecke, and Kizilcec. [Data Annotation as Measurement](https://arxiv.org/abs/2608.07297). 2026.
-
-::: {.cite-block}
-Cited as: Wu, Qianrong. (Sep 2026). "Model-Assisted Annotation: From Labels to Reliable Estimates." qianrongwu.com.
-:::
