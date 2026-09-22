@@ -1,6 +1,6 @@
 ---
 title: "Model-Assisted Annotation: From Labels to Reliable Estimates"
-description: "Task validation, structured judge errors, human routing, statistical correction, and the quality of the reference labels."
+description: "Selective human review changes which model errors we observe, and therefore the correction an estimate needs. Routing and correction have to be designed together."
 date: 2026-09-21
 categories: [annotation, evaluation, llm-as-a-judge, statistics]
 image: fig_coverage_vs_bias.png
@@ -12,21 +12,17 @@ format:
     css: article.css
 ---
 
-Model-assisted annotation serves several goals: assigning labels to individual items, training downstream models, and estimating population quantities. These uses need different checks. A model can do well on a classification benchmark and still produce a biased estimate of prevalence.
+Using model labels to estimate a population quantity requires accounting for both the model's errors and how the human labels are collected. Selective review changes which errors we observe, and therefore the correction an estimate needs. This post examines how routing and correction should be designed together.
 
-Consider two classifiers that each make 120 errors on 1,000 items. One makes 60 false positives and 60 false negatives; the other makes 90 and 30. Both are 88% accurate, but their estimated prevalences differ from the reference prevalence by zero and by +6 percentage points. Classification error depends on the *sum* of the two error masses; prevalence error depends on their *difference*.
+A short example shows why model error alone is not the right quantity to watch. Two classifiers each make 120 errors on 1,000 items, so both are 88% accurate. One makes 60 false positives and 60 false negatives; the other makes 90 and 30. Their prevalence estimates are off by zero and by +6 percentage points. Classification error depends on the *sum* of the two error masses; prevalence error depends on their *difference*.
 
-This post organizes annotation around four stages: **generate** candidate labels, **route** items to an appropriate judge, **correct** estimates using human labels, and **audit** the reference labels themselves. The connection I care most about is between routing and correction: the rule that selects which items receive human review also determines what can be estimated from that review. The four-stage framing and that argument are my own reading of the literature. Claims about individual papers are attributed to them, and places where I go beyond a paper are marked.
+I organize the discussion around four stages: **generate** candidate labels, **route** items to a judge or to a person, **correct** estimates using the human labels, and **audit** the reference labels themselves. The first stage gets one paragraph, since its lesson is a premise for the rest. The four-stage framing and the argument about routing and correction are my own reading of the literature; claims about individual papers are attributed to them, and places where I go beyond a paper are marked.
 
 ![**Figure 1.** Annotation as a control loop: label generation, routing, statistical correction, and audit, with feedback to the earlier stages.](fig_control_loop.svg)
 
-## Task-specific validation
+## A premise: validation is task-specific
 
-Annotation quality depends on the model, the data distribution, and the label definition together. Validation on one task is limited evidence for another, even when both use familiar categories such as toxicity or preference.
-
-Pangakis et al. [1] replicated 27 annotation tasks from social-science articles. Median accuracy was 0.85 and median F1 was 0.71, but precision or recall fell below 0.5 on nine of the tasks. Aggregate performance concealed large task-level variation, and the authors recommend validating on the exact task, dataset, and guideline in use.
-
-Prompting can move a model toward a task definition, and in the one study I know that measures how far, the movement was partial. In a toxicity-annotation study across nine models and five datasets, Casanova et al. [2] report an overall rescue rate of 34.8%: the share of zero-shot errors corrected by prompting, pooled over prompting conditions that include definitions which do not match the dataset's own. The rate fell to 20.8% for errors made with confidence above 0.9. With the matching definition supplied, mean accuracy across all nine models rose from 80.3% in the zero-shot condition to 82.0%, a gain of 1.7 percentage points. Persistent disagreement calls for looking at the examples and the definition before choosing between more prompting, fine-tuning, or human annotation. Revising the definition is a legitimate option, with the caveat that it changes the measurement target.
+Annotation quality depends on the model, the data distribution, and the label definition together, so a validation result on one task carries little over to another. Pangakis et al. [1] replicated 27 social-science annotation tasks and found a median accuracy of 0.85 alongside precision or recall below 0.5 on nine of them. Prompting closes only part of a gap between the model's prior and a task's definition: in a nine-model toxicity study, Casanova et al. [2] found that prompting rescued 34.8% of zero-shot errors overall and 20.8% of those made with confidence above 0.9, and that supplying the matching definition raised mean accuracy across the nine models from 80.3% to 82.0%. Everything below assumes the model has been validated on the task at hand, and takes for granted that some of its errors will persist, especially the confident ones.
 
 ## Structured judge errors
 
