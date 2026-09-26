@@ -1,0 +1,39 @@
+/* Keep wide equations and tables inside the article on small screens. */
+#quarto-document-content .math.display {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-block: 0.25rem;
+}
+
+#quarto-document-content figure img {
+  max-width: 100%;
+  height: auto;
+}
+
+#quarto-document-content .table-scroll {
+  max-width: 100%;
+  overflow-x: auto;
+  margin-block: 1.25rem;
+}
+
+#quarto-document-content .table-scroll table {
+  min-width: 36rem;
+  margin-bottom: 0.5rem;
+  font-variant-numeric: tabular-nums;
+}
+
+#quarto-document-content .table-scroll td {
+  white-space: nowrap;
+}
+
+#quarto-document-content .table-scroll:focus-visible {
+  outline: 2px solid #246db2;
+  outline-offset: 3px;
+}
+
+/* Keep long scientific captions in the article, clear of the enlarged image. */
+.glightbox-container .gslide-description {
+  display: none;
+}

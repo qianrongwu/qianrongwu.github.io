@@ -10,7 +10,300 @@
 <atom:link href="https://qianrongwu.com/index.xml" rel="self" type="application/rss+xml"/>
 <description></description>
 <generator>quarto-1.10.18</generator>
-<lastBuildDate>Mon, 21 Sep 2026 07:00:00 GMT</lastBuildDate>
+<lastBuildDate>Sat, 26 Sep 2026 07:00:00 GMT</lastBuildDate>
+<item>
+  <title>BF16 vs. FP16 in RL Fine-Tuning</title>
+  <link>https://qianrongwu.com/posts/bf16-vs-fp16/</link>
+  <description><![CDATA[ 
+
+
+
+
+
+<p>A rollout engine and a training engine can load the same checkpoint, read the same token prefix, and still assign different probabilities to the next token. For RL fine-tuning, that numerical gap changes the distribution behind the policy-gradient estimate.</p>
+<p>The <a href="https://qianrongwu.com/posts/entropy-budget/">previous post</a> examined exploration through GRPO, DAPO and GSPO. Here I focus on an implementation detail beneath those objectives: the choice between BF16 and FP16. BF16 offers a wide numerical range; FP16 allocates more bits to precision. Qi et al.’s <a href="https://arxiv.org/abs/2510.26788"><em>Defeating the Training-Inference Mismatch via FP16</em></a> found that this difference can substantially reduce rollout–trainer mismatch in their RL experiments.</p>
+<p>I use a small NumPy model to examine one possible mechanism. Two implementations share weights and rounding points but accumulate matrix products differently. The experiment shows how rounding can turn small execution differences into persistent probability differences. It also illustrates an exact fact about likelihood ratios: on samples from the rollout policy, the trainer’s log-probability has a negative average offset equal to a KL divergence. Over a long response, that offset can matter as much as the random variation around it.</p>
+<p>The toy has no attention, reward, or policy updates. It is a controlled numerical experiment; its error ratios are measurements of this configuration.</p>
+<section id="what-the-formats-trade" class="level2">
+<h2 class="anchored" data-anchor-id="what-the-formats-trade">What the formats trade</h2>
+<p>FP16 and BF16 each use one sign bit. They allocate the remaining bits differently:</p>
+<div class="table-scroll" aria-label="Floating-point format comparison" tabindex="0">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 13%">
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 17%">
+<col style="width: 17%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Format</th>
+<th style="text-align: right;">Exponent bits</th>
+<th style="text-align: right;">Fraction bits</th>
+<th style="text-align: right;">Largest finite value</th>
+<th style="text-align: right;">Smallest positive normal</th>
+<th style="text-align: right;">Spacing above 1</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FP32</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">23</td>
+<td style="text-align: right;">≈ 3.40 × 10³⁸</td>
+<td style="text-align: right;">≈ 1.18 × 10⁻³⁸</td>
+<td style="text-align: right;">2⁻²³</td>
+</tr>
+<tr class="even">
+<td>FP16</td>
+<td style="text-align: right;">5</td>
+<td style="text-align: right;">10</td>
+<td style="text-align: right;">65,504</td>
+<td style="text-align: right;">≈ 6.10 × 10⁻⁵</td>
+<td style="text-align: right;">2⁻¹⁰</td>
+</tr>
+<tr class="odd">
+<td>BF16</td>
+<td style="text-align: right;">8</td>
+<td style="text-align: right;">7</td>
+<td style="text-align: right;">≈ 3.39 × 10³⁸</td>
+<td style="text-align: right;">≈ 1.18 × 10⁻³⁸</td>
+<td style="text-align: right;">2⁻⁷</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The fraction-bit counts exclude the implicit leading bit of a normal number. For a positive normal value <img src="https://latex.codecogs.com/png.latex?x">, away from the upper range boundary, the local spacing is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Coperatorname%7Bulp%7D(x)=2%5E%7B%5Clfloor%5Clog_2%20x%5Crfloor-m%7D,%0A"></p>
+<p>where <img src="https://latex.codecogs.com/png.latex?m"> is the number of fraction bits. Within each power-of-two interval, the relative spacing lies between <img src="https://latex.codecogs.com/png.latex?2%5E%7B-(m+1)%7D"> and <img src="https://latex.codecogs.com/png.latex?2%5E%7B-m%7D">. Where both formats represent normal numbers, FP16’s grid is eight times finer than BF16’s. That is a statement about representable values, not an eightfold guarantee for a network’s output error.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="figs/fig1_precision_vs_range.svg" class="lightbox" data-gallery="quarto-lightbox-gallery-1" title="Figure 1. Left: relative spacing within the normal range, shown over magnitudes 1–4; FP16’s grid is eight times finer. Right: finite positive representable ranges on a logarithmic magnitude axis. Solid spans show normal values and dotted extensions show subnormals; FP32 is included as a range reference."><img src="https://qianrongwu.com/posts/bf16-vs-fp16/figs/fig1_precision_vs_range.svg" class="img-fluid figure-img" alt="Figure 1. Left: relative spacing within the normal range, shown over magnitudes 1–4; FP16’s grid is eight times finer. Right: finite positive representable ranges on a logarithmic magnitude axis. Solid spans show normal values and dotted extensions show subnormals; FP32 is included as a range reference."></a></p>
+<figcaption><strong>Figure 1.</strong> Left: relative spacing within the normal range, shown over magnitudes 1–4; FP16’s grid is eight times finer. Right: finite positive representable ranges on a logarithmic magnitude axis. Solid spans show normal values and dotted extensions show subnormals; FP32 is included as a range reference.</figcaption>
+</figure>
+</div>
+<p>This trade explains BF16’s appeal for large-model training. <a href="https://arxiv.org/abs/1710.03740">Micikevicius et al.</a> established an FP16 mixed-precision recipe using FP32 master weights and loss scaling to preserve small gradients. <a href="https://arxiv.org/abs/1905.12322">Kalamkar et al.</a> showed that BF16’s FP32-like exponent range made mixed-precision training practical across several workloads without the same need for loss scaling. BF16 greatly reduces range-related difficulties, though it does not make overflow, underflow, or <code>NaN</code> impossible.</p>
+<p>For RL on an existing checkpoint, the question is whether FP16’s narrower range is acceptable in exchange for finer resolution. A pretrained model does not automatically satisfy that condition: its activations were never required to fit within FP16’s range, and they can change during fine-tuning.</p>
+</section>
+<section id="same-weights-different-policies" class="level2">
+<h2 class="anchored" data-anchor-id="same-weights-different-policies">Same weights, different policies</h2>
+<p>It helps to distinguish three policies for a prompt <img src="https://latex.codecogs.com/png.latex?x">:</p>
+<ul>
+<li><img src="https://latex.codecogs.com/png.latex?%5Cmu_%7B%5Cmathrm%7Bold%7D%7D">: the distribution that actually sampled the response;</li>
+<li><img src="https://latex.codecogs.com/png.latex?%5Cpi_%7B%5Cmathrm%7Bold%7D%7D">: the training engine evaluated at those same old weights;</li>
+<li><img src="https://latex.codecogs.com/png.latex?%5Cpi_%5Ctheta">: the training engine at the current weights.</li>
+</ul>
+<p>The full response-level importance ratio factors into two terms:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cfrac%7B%5Cpi_%5Ctheta(y%5Cmid%20x)%7D%7B%5Cmu_%7B%5Cmathrm%7Bold%7D%7D(y%5Cmid%20x)%7D%0A=%0A%5Cunderbrace%7B%5Cfrac%7B%5Cpi_%5Ctheta(y%5Cmid%20x)%7D%7B%5Cpi_%7B%5Cmathrm%7Bold%7D%7D(y%5Cmid%20x)%7D%7D_%7B%5Ctext%7Bpolicy%20update%7D%7D%0A%5Cunderbrace%7B%5Cfrac%7B%5Cpi_%7B%5Cmathrm%7Bold%7D%7D(y%5Cmid%20x)%7D%7B%5Cmu_%7B%5Cmathrm%7Bold%7D%7D(y%5Cmid%20x)%7D%7D_%7B%5Ctext%7Bengine%20mismatch%7D%7D.%0A"></p>
+<p>Even before a gradient update, the second term can differ from one. Recomputing old log-probabilities with the trainer removes this term from a trainer-to-trainer ratio, but does not change the distribution that generated the data.</p>
+<p>For the expected-reward objective, importance weighting gives the usual identity</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cnabla_%5Ctheta%20J(%5Ctheta)%0A=%0A%5Cmathbb%20E_%7By%5Csim%5Cmu_%7B%5Cmathrm%7Bold%7D%7D%7D%0A%5Cleft%5B%0A%5Cfrac%7B%5Cpi_%5Ctheta(y)%7D%7B%5Cmu_%7B%5Cmathrm%7Bold%7D%7D(y)%7D%0A%5Cbigl(R(y)-b(x)%5Cbigr)%0A%5Cnabla_%5Ctheta%5Clog%5Cpi_%5Ctheta(y)%0A%5Cright%5D,%0A"></p>
+<p>with a prompt-dependent baseline <img src="https://latex.codecogs.com/png.latex?b(x)"> and the prompt suppressed elsewhere. This assumes that the behavior distribution covers the target’s support and that the denominator is the actual sampling probability. Temperature, top-<img src="https://latex.codecogs.com/png.latex?p">, token masks, and stopping rules must be accounted for. Clipping and group-normalized advantages introduce additional choices beyond this identity.</p>
+<p>The engine gap is well documented. <a href="https://fengyao.notion.site/off-policy-rl">Yao et al.</a> described its off-policy consequences and a token-level truncated importance-sampling correction. <a href="https://yingru.notion.site/When-Speed-Kills-Stability-Demystifying-RL-Collapse-from-the-Training-Inference-Mismatch-271211a558b7808d8b12d403fd15edda">Liu et al.</a> examined sequence-level corrections and masking. <a href="https://arxiv.org/html/2506.13585v1#S3.SS2">MiniMax-M1, §3.2</a>, traced a damaging mismatch to large activations in the LM output head and improved consistency by using FP32 there. The <a href="https://arxiv.org/abs/2512.01374">Qwen team’s analysis</a> also discusses kernel differences and MoE routing.</p>
+<p>Qi et al.&nbsp;tested another lever: FP16. Their offline analysis used DeepSeek-R1-Distill-Qwen-1.5B with temperature 1 and no top-<img src="https://latex.codecogs.com/png.latex?p">, so the probabilities were directly comparable. Figure 2 reports sequence KL values of 7.64 for BF16 and 0.32 for FP16, a ratio of about 24. In a separate 1.5B sanity test, FP16 importance-weighted policy gradient outperformed the BF16 baselines. Further experiments covered larger dense models, MoE, and LoRA under different algorithmic settings. These results motivate examining precision; they do not establish a universal multiplier. See <a href="https://arxiv.org/html/2510.26788v1#S3.SS5">the offline analysis</a> and <a href="https://arxiv.org/html/2510.26788v1#S4">the training experiments</a> for their separate settings.</p>
+</section>
+<section id="a-controlled-numerical-experiment" class="level2">
+<h2 class="anchored" data-anchor-id="a-controlled-numerical-experiment">A controlled numerical experiment</h2>
+<p>The toy is a recurrent residual MLP: four blocks, width 256, SiLU activations, RMSNorm, and an 8,192-token vocabulary. Its recurrence carries a state between tokens. The recurrent matrix is initialized with a <img src="https://latex.codecogs.com/png.latex?0.9/%5Csqrt%7B256%7D"> scale; this is an initialization choice, not a guarantee that the nonlinear system is contractive. The output scale is 14, producing mean next-token entropy near 0.55 nats in these runs. This creates confident distributions without modeling the semantics of reasoning.</p>
+<p>For each format, both engines use the same cast weights:</p>
+<ul>
+<li>The <strong>rollout engine</strong> computes matrix products in 64-element split-K chunks and adds their FP32 partial sums sequentially.</li>
+<li>The <strong>trainer engine</strong> uses a single FP32 BLAS call for each matrix product.</li>
+</ul>
+<p>Both apply the same storage-rounding operations. BF16 is emulated with round-to-nearest-even; FP16 uses NumPy’s <code>float16</code>. The scripts specify the rounding points explicitly. This emulates storage precision and a reduction-order difference, rather than executing GPU Tensor Core kernels.</p>
+<p>For measurement, both engines’ logits are converted to normalized FP64 log-probabilities. Sampling also uses FP64. This avoids letting the diagnostic softmax or cumulative sampler dominate a very small mismatch. All model matrix products remain FP32, with the selected format’s rounding applied as specified. A separate small-model control gives exactly zero sampled mismatch, conditional KL, and state discrepancy in all four conditions when both engines use identical accumulation.</p>
+<p>Each condition generates 128 responses of 2,048 tokens for each of three sampling seeds: 384 responses in total, with one fixed model initialization. Every sampled token is scored by both engines on the <strong>same token prefix</strong>. Across formats, the weights after casting and the sampled prefixes can differ. The confidence intervals below resample whole responses and describe sampling uncertainty for this model and environment.</p>
+<section id="rounding-can-erase-a-differenceor-enlarge-it" class="level3">
+<h3 class="anchored" data-anchor-id="rounding-can-erase-a-differenceor-enlarge-it">Rounding can erase a difference—or enlarge it</h3>
+<p>Start with one matrix multiplication, before recurrence or depth can amplify anything:</p>
+<div class="table-scroll" aria-label="Single matrix multiplication results" tabindex="0">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 26%">
+<col style="width: 26%">
+<col style="width: 26%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Output format</th>
+<th style="text-align: right;">Elements that differ</th>
+<th style="text-align: right;">Median relative gap among differing elements</th>
+<th style="text-align: right;">Relative Frobenius norm difference</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FP32</td>
+<td style="text-align: right;">90%</td>
+<td style="text-align: right;">2.9 × 10⁻⁷</td>
+<td style="text-align: right;">3.01 × 10⁻⁷</td>
+</tr>
+<tr class="even">
+<td>FP16</td>
+<td style="text-align: right;">0.142%</td>
+<td style="text-align: right;">6.71 × 10⁻⁴</td>
+<td style="text-align: right;">1.23 × 10⁻⁵</td>
+</tr>
+<tr class="odd">
+<td>BF16</td>
+<td style="text-align: right;">0.00827%</td>
+<td style="text-align: right;">5.41 × 10⁻³</td>
+<td style="text-align: right;">2.19 × 10⁻⁵</td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Most small differences between the two FP32 computations disappear when both results round to the same 16-bit value. A minority straddle a rounding boundary and become a full-ulp difference. A coarser grid can make these events less frequent but larger when they occur. Consequently, the norm difference after one operation does not simply scale with the ratio of fraction-bit counts.</p>
+<p>Subsequent layers transform those perturbations. They may attenuate them, preserve them, or amplify them, depending on the weights, activations, normalization, and rounding boundaries. In this toy, the relative state discrepancy settles near the normal-range spacing of each 16-bit format after the initial transient.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="figs/fig2_grid_saturation.svg" class="lightbox" data-gallery="quarto-lightbox-gallery-2" title="Figure 2. Mean relative state discrepancy along rollout-generated prefixes, with 95% whole-response bootstrap intervals. The same two accumulation strategies are compared in each format. Dotted reference lines mark 2^{-m}; proximity to these lines is an observation about this configuration, not a general saturation law."><img src="https://qianrongwu.com/posts/bf16-vs-fp16/figs/fig2_grid_saturation.svg" class="img-fluid figure-img" alt="Figure 2. Mean relative state discrepancy along rollout-generated prefixes, with 95% whole-response bootstrap intervals. The same two accumulation strategies are compared in each format. Dotted reference lines mark 2^{-m}; proximity to these lines is an observation about this configuration, not a general saturation law."></a></p>
+<figcaption><strong>Figure 2.</strong> Mean relative state discrepancy along rollout-generated prefixes, with 95% whole-response bootstrap intervals. The same two accumulation strategies are compared in each format. Dotted reference lines mark <img src="https://latex.codecogs.com/png.latex?2%5E%7B-m%7D">; proximity to these lines is an observation about this configuration, not a general saturation law.</figcaption>
+</figure>
+</div>
+<p>The mechanism is therefore conditional: a small execution difference can survive rounding and propagate through the model. Its eventual size remains a property of the model and the execution path, as well as the format.</p>
+</section>
+<section id="from-states-to-token-probabilities" class="level3">
+<h3 class="anchored" data-anchor-id="from-states-to-token-probabilities">From states to token probabilities</h3>
+<p>Write <img src="https://latex.codecogs.com/png.latex?%5Cmu"> and <img src="https://latex.codecogs.com/png.latex?%5Cpi"> for the rollout and trainer distributions at the same weights, and define</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0Ad_t=%5Clog%5Cpi(y_t%5Cmid%20y_%7B%3Ct%7D)-%5Clog%5Cmu(y_t%5Cmid%20y_%7B%3Ct%7D),%0A%5Cqquad%20y_t%5Csim%5Cmu(%5Ccdot%5Cmid%20y_%7B%3Ct%7D).%0A"></p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="figs/fig3_token_mismatch.svg" class="lightbox" data-gallery="quarto-lightbox-gallery-3" title="Figure 3. Absolute token log-probability differences in the three formats. Exact matches are reported separately from the distribution of nonzero differences. Results pool three sampling seeds at one model initialization. Histogram bins span 0.2 decades; bin heights are fractions of all sampled tokens, so the nonzero histogram mass plus the separate zero mass sums to one."><img src="https://qianrongwu.com/posts/bf16-vs-fp16/figs/fig3_token_mismatch.svg" class="img-fluid figure-img" alt="Figure 3. Absolute token log-probability differences in the three formats. Exact matches are reported separately from the distribution of nonzero differences. Results pool three sampling seeds at one model initialization. Histogram bins span 0.2 decades; bin heights are fractions of all sampled tokens, so the nonzero histogram mass plus the separate zero mass sums to one."></a></p>
+<figcaption><strong>Figure 3.</strong> Absolute token log-probability differences in the three formats. Exact matches are reported separately from the distribution of nonzero differences. Results pool three sampling seeds at one model initialization. Histogram bins span 0.2 decades; bin heights are fractions of all sampled tokens, so the nonzero histogram mass plus the separate zero mass sums to one.</figcaption>
+</figure>
+</div>
+<p>In these runs, the mean absolute token mismatch is 8 times larger in BF16 than in FP16. The table also reports a different quantity: <strong>conditional KL</strong>, summed over the entire vocabulary at each visited prefix. Computing it directly avoids the extra variance of estimating a small KL from only the sampled token’s log-ratio.</p>
+<div class="table-scroll" aria-label="Token and sequence mismatch results" tabindex="0">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 26%">
+<col style="width: 26%">
+<col style="width: 26%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Format</th>
+<th style="text-align: right;">Mean absolute token mismatch</th>
+<th style="text-align: right;">Conditional KL per token</th>
+<th style="text-align: right;">Sequence RMS at 2,048</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>FP32</td>
+<td style="text-align: right;">4.14 × 10⁻⁶</td>
+<td style="text-align: right;">3.16 × 10⁻¹¹<br><small>[3.15, 3.17] × 10⁻¹¹</small></td>
+<td style="text-align: right;">3.49 × 10⁻⁴<br><small>[3.25, 3.71] × 10⁻⁴</small></td>
+</tr>
+<tr class="even">
+<td>FP16</td>
+<td style="text-align: right;">4.88 × 10⁻³</td>
+<td style="text-align: right;">5.15 × 10⁻⁵<br><small>[5.13, 5.16] × 10⁻⁵</small></td>
+<td style="text-align: right;">0.469<br><small>[0.435, 0.5]</small></td>
+</tr>
+<tr class="odd">
+<td>BF16</td>
+<td style="text-align: right;">0.039</td>
+<td style="text-align: right;">3.28 × 10⁻³<br><small>[3.27, 3.29] × 10⁻³</small></td>
+<td style="text-align: right;">7.57<br><small>[7.23, 7.92]</small></td>
+</tr>
+<tr class="even">
+<td>BF16 + FP32 head</td>
+<td style="text-align: right;">0.032</td>
+<td style="text-align: right;">1.89 × 10⁻³<br><small>[1.89, 1.9] × 10⁻³</small></td>
+<td style="text-align: right;">4.69<br><small>[4.42, 4.97]</small></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>The intervals are 95% response-bootstrap intervals. The sequence RMS is <img src="https://latex.codecogs.com/png.latex?%5Csqrt%7BE%5BS_T%5E2%5D%7D">, where <img src="https://latex.codecogs.com/png.latex?S_T=%5Csum_%7Bt=1%7D%5ET%20d_t">, at <img src="https://latex.codecogs.com/png.latex?T=2%7B,%7D048">. KL, absolute token error, and sequence RMS answer different questions; their ratios need not agree.</p>
+<p>Low-probability sampled tokens show larger log-probability changes in this experiment. The relevant local sensitivity is</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cdelta%5Clog%20p_y=%5Cdelta%20z_y-%5Csum_v%20p_v%5C,%5Cdelta%20z_v.%0A"></p>
+<p>A highly confident prediction tends to cancel a perturbation shared by its selected logit and the probability-weighted average. A low-probability token has less of that protection. This explains a possible sensitivity pattern; low probability alone does not establish that a token carries a more useful learning signal.</p>
+</section>
+</section>
+<section id="why-sequence-mismatch-develops-a-drift" class="level2">
+<h2 class="anchored" data-anchor-id="why-sequence-mismatch-develops-a-drift">Why sequence mismatch develops a drift</h2>
+<p>For a fixed prefix, with normalized distributions and the support condition above,</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cmathbb%20E_%7By_t%5Csim%5Cmu%7D%5Be%5E%7Bd_t%7D%5Cmid%20y_%7B%3Ct%7D%5D=1,%0A%5Cqquad%0A%5Cmathbb%20E_%7By_t%5Csim%5Cmu%7D%5Bd_t%5Cmid%20y_%7B%3Ct%7D%5D%0A=-%5Cmathrm%7BKL%7D%5Cbigl(%5Cmu_t%5C%7C%5Cpi_t%5Cbigr).%0A"></p>
+<p>This is exact. The mean log-ratio is nonpositive even when both implementations use the same weights. For a fixed horizon <img src="https://latex.codecogs.com/png.latex?T">, averaging over rollout prefixes gives</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cmathbb%20E_%5Cmu%5BS_T%5D%0A=-%5Csum_%7Bt=1%7D%5ET%0A%5Cmathbb%20E_%7BY_%7B%3Ct%7D%5Csim%5Cmu%7D%0A%5Cleft%5B%5Cmathrm%7BKL%7D%5Cbigl(%5Cmu_t(%5Ccdot%5Cmid%20Y_%7B%3Ct%7D)%5C%7C%5Cpi_t(%5Ccdot%5Cmid%20Y_%7B%3Ct%7D)%5Cbigr)%5Cright%5D.%0A"></p>
+<p>No independence assumption is needed for that drift identity. Variance requires more care:</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Coperatorname%7BVar%7D(S_T)%0A=%5Csum_t%5Coperatorname%7BVar%7D(d_t)%0A+2%5Csum_%7Bs%3Ct%7D%5Coperatorname%7BCov%7D(d_s,d_t).%0A"></p>
+<p>Suppose the average per-token KL is approximately constant at <img src="https://latex.codecogs.com/png.latex?%5Ckappa">, the token log-ratio variance is approximately <img src="https://latex.codecogs.com/png.latex?%5Csigma%5E2">, and the cumulative covariance is small. Then</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Cmathbb%20E%5BS_T%5D%5Capprox-T%5Ckappa,%0A%5Cqquad%0A%5Coperatorname%7BSD%7D(S_T)%5Capprox%5Csqrt%7BT%7D%5C,%5Csigma,%0A%5Cqquad%0A%5Coperatorname%7BRMS%7D(S_T)%5Capprox%5Csqrt%7BT%5Csigma%5E2+T%5E2%5Ckappa%5E2%7D.%0A"></p>
+<p>The mean grows in magnitude with <img src="https://latex.codecogs.com/png.latex?T">; the standard deviation grows like <img src="https://latex.codecogs.com/png.latex?%5Csqrt%20T"> under this approximation. Figure 4 plots them separately, so their agreement with the approximation can be inspected rather than inferred from a small lag-1 correlation.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><a href="figs/fig4_sequence_mismatch.svg" class="lightbox" data-gallery="quarto-lightbox-gallery-4" title="Figure 4. Sequence log-ratios at fixed prefix lengths. Left: the signed empirical mean, compared with the negative cumulative full-vocabulary conditional KL averaged over the same rollout prefixes. Right: the empirical standard deviation, compared with a prediction that omits cross-position covariance. Shading shows 95% whole-response bootstrap intervals. The left vertical axis is logarithmic away from zero and linear near zero. These checks concern this fixed model and sampled prefixes."><img src="https://qianrongwu.com/posts/bf16-vs-fp16/figs/fig4_sequence_mismatch.svg" class="img-fluid figure-img" alt="Figure 4. Sequence log-ratios at fixed prefix lengths. Left: the signed empirical mean, compared with the negative cumulative full-vocabulary conditional KL averaged over the same rollout prefixes. Right: the empirical standard deviation, compared with a prediction that omits cross-position covariance. Shading shows 95% whole-response bootstrap intervals. The left vertical axis is logarithmic away from zero and linear near zero. These checks concern this fixed model and sampled prefixes."></a></p>
+<figcaption><strong>Figure 4.</strong> Sequence log-ratios at fixed prefix lengths. Left: the signed empirical mean, compared with the negative cumulative full-vocabulary conditional KL averaged over the same rollout prefixes. Right: the empirical standard deviation, compared with a prediction that omits cross-position covariance. Shading shows 95% whole-response bootstrap intervals. The left vertical axis is logarithmic away from zero and linear near zero. These checks concern this fixed model and sampled prefixes.</figcaption>
+</figure>
+</div>
+<p>At 2,048 tokens, the measured sequence variance divided by the sum of the individual token variances is 0.96 for FP16 and 0.93 for BF16. The omitted covariance is modest here, although that need not hold in a different model.</p>
+<p>For small log-ratio perturbations, the cumulant expansion of <img src="https://latex.codecogs.com/png.latex?%5Clog%20E%5Be%5E%7Bd_t%7D%5D=0"> gives <img src="https://latex.codecogs.com/png.latex?%5Ckappa%5Capprox%5Csigma%5E2/2">, provided higher-order terms are negligible. This yields the familiar approximation</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Coperatorname%7BRMS%7D(S_T)%0A%5Capprox%5Csqrt%7BT%5Csigma%5E2+(T%5Csigma%5E2/2)%5E2%7D.%0A"></p>
+<p>It explains how an eightfold change in the token noise scale <em>could</em> have a larger effect on long-sequence RMS: the noise term scales with <img src="https://latex.codecogs.com/png.latex?%5Csigma">, while the approximate drift scales with <img src="https://latex.codecogs.com/png.latex?%5Csigma%5E2">. In this experiment the measured BF16/FP16 sequence RMS ratio is 16.2 at 2,048 tokens, and the directly computed per-token KL ratio is 63.8. These are results for the toy, not an explanation of Qi et al.’s particular 24× sequence-KL measurement. Their metric and experimental distribution differ.</p>
+<p>The distinction also matters statistically. Estimating KL as <img src="https://latex.codecogs.com/png.latex?-%5Coperatorname%7Bmean%7D(d_t)"> is valid under the stated conditions but can be noisy when KL is small. The released analysis reports that estimate, a control-variate estimate <img src="https://latex.codecogs.com/png.latex?%5Coperatorname%7Bmean%7D(e%5E%7Bd_t%7D-1-d_t)">, and the direct conditional KL. The article uses the direct calculation for its KL claims.</p>
+</section>
+<section id="what-this-suggests-for-rl-objectives" class="level2">
+<h2 class="anchored" data-anchor-id="what-this-suggests-for-rl-objectives">What this suggests for RL objectives</h2>
+<p>Reducing engine mismatch can make off-policy correction easier. The exact effect on a gradient estimator depends on rewards, score functions, tail behavior, and the correction rule. The negative mean of <img src="https://latex.codecogs.com/png.latex?d_t"> is a KL identity; it does not imply that gradient bias or gradient variance scales as <img src="https://latex.codecogs.com/png.latex?%5Csigma%5E2">. Even the variance of the importance weight is a different divergence: <img src="https://latex.codecogs.com/png.latex?%5Coperatorname%7BVar%7D_%5Cmu(%5Cpi/%5Cmu)=%5Cchi%5E2(%5Cpi%5C%7C%5Cmu)"> when the second moment exists.</p>
+<p>Sequence ratios combine all token log-ratios, so their distribution can change substantially with length. A token-level correction does not generally recover the full sequence change of measure. Truncation and masking then make different tradeoffs: some cap or reject only large ratios, while other rules use two-sided intervals. Negative log-ratio drift alone does not tell us how often any particular rule activates.</p>
+<p><strong>A note on GSPO.</strong> <a href="https://arxiv.org/html/2507.18071v2">GSPO, Eq. 7 and §5.4</a>, uses a length-normalized sequence ratio and discusses using rollout-engine likelihoods directly. If those likelihoods supply the denominator, then at the same checkpoint the mismatch contribution satisfies</p>
+<p><img src="https://latex.codecogs.com/png.latex?%0A%5Clog%20s(y)=%5Cfrac%7BS_T%7D%7BT%7D,%0A%5Cqquad%0AE%5B%5Clog%20s%5D%5Capprox-%5Ckappa,%0A%5Cqquad%0A%5Coperatorname%7BSD%7D(%5Clog%20s)%5Capprox%5Cfrac%7B%5Csigma%7D%7B%5Csqrt%20T%7D.%0A"></p>
+<p>Length normalization reduces fluctuations under the weak-dependence approximation but leaves the mean log-ratio offset. In this toy the BF16 offset is larger than the lower clipping width <img src="https://latex.codecogs.com/png.latex?3%5Ctimes10%5E%7B-4%7D"> used in the cited GSPO experiment; its upper width is <img src="https://latex.codecogs.com/png.latex?4%5Ctimes10%5E%7B-4%7D">. This is a useful diagnostic comparison, not a test of GSPO. The clipped surrogate depends on the advantage sign: a low ratio enters the clipped branch for negative advantages, while a high ratio does so for positive advantages. The toy has neither advantages nor policy updates, and a current-policy ratio would also include the genuine weight-update term.</p>
+<p>An FP32 LM head is another useful diagnostic. In the head ablation, its weights and output logits stay FP32 while the rest of the model uses BF16. Conditional KL falls by 42.3%, but remains 36.8 times the FP16 value. This shows that, in this toy, disagreement has already developed below the head. MiniMax’s real-model result should be read in its own context: the team located the dominant problem in its output layer and fixed that layer.</p>
+</section>
+<section id="choosing-what-to-measureand-what-to-change" class="level2">
+<h2 class="anchored" data-anchor-id="choosing-what-to-measureand-what-to-change">Choosing what to measure—and what to change</h2>
+<p>A precision change should be evaluated at fixed weights before interpreting a training curve. A practical comparison has four parts:</p>
+<ol type="1">
+<li><strong>Align the probability definitions.</strong> Score the same token prefixes, using the same checkpoint, temperature, masks, and stopping conventions. Separate engine mismatch from changes introduced by policy updates.</li>
+<li><strong>Measure both token and sequence behavior.</strong> Report conditional KL where feasible, distributions of sampled-token log-ratios, and sequence means and spreads at fixed prefix lengths. Include uncertainty across responses. Low-probability-token slices can reveal errors that an overall average hides.</li>
+<li><strong>Check FP16’s range.</strong> Its maximum finite value is 65,504. Its smallest positive subnormal is <img src="https://latex.codecogs.com/png.latex?2%5E%7B-24%7D%5Capprox5.96%5Ctimes10%5E%7B-8%7D">; rounding to zero and hardware flush-to-zero behavior require separate treatment. FP32 master weights and dynamic loss scaling can preserve small updates and gradients, but loss scaling cannot repair a forward activation that has already overflowed.</li>
+<li><strong>Recheck during optimization.</strong> Weights, activations, routing, and response lengths evolve. A favorable fixed-checkpoint result does not guarantee a stable training run.</li>
+</ol>
+<p>The last point has direct evidence. <a href="https://arxiv.org/html/2602.01826v1#S4.SS4">Zhang et al., §4.4</a>, observed collapse under FP16 as well as BF16 in their experiments, and stabilized the FP16 run with their learning-rate schedule. That result limits any claim that changing the format is sufficient.</p>
+<p>When studying length, use a fixed-prefix design with an explicit EOS convention. Bucketing naturally terminated responses by their final length conditions on a stopping event; the fixed-<img src="https://latex.codecogs.com/png.latex?T"> drift formula cannot be applied to those buckets without accounting for that selection.</p>
+<p>There are also direct engineering remedies. <a href="https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/">He and Thinking Machines Lab</a> demonstrated batch-invariant execution and aligned sampling/training stacks with zero measured mismatch. The <a href="https://github.com/zhaochenyang20/Awesome-ML-SYS-Tutorial/blob/main/rlhf/slime/mismatch/blog-en.md">Miles alignment write-up</a> describes bitwise alignment across SGLang and training backends, alongside algorithmic correction options. <a href="https://arxiv.org/abs/2512.01374">MoE routing replay</a> targets another specific source. These approaches address different parts of the system; their throughput and engineering costs need measurement on the intended workload.</p>
+<p>FP16 is therefore a useful experiment when range permits and engine mismatch is material. The format changes the rounding grid. The resulting policy difference must still be measured, and the need for correction should be judged from that difference and the training objective.</p>
+</section>
+<section id="reproducing-the-experiment" class="level2">
+<h2 class="anchored" data-anchor-id="reproducing-the-experiment">Reproducing the experiment</h2>
+<p><a href="bf16-vs-fp16-source.zip">Download the source, recorded results, and environment metadata</a>. The package includes the four conditions, three sampling seeds, full-vocabulary KL diagnostics, response-bootstrap intervals, and the scripts that produce every table and figure. The README gives one command for a complete rerun and a faster command to regenerate figures from the recorded data.</p>
+<p>The recorded run uses Python 3.12.14, NumPy 2.3.5, and Apple Accelerate BLAS on macOS arm64. One model initialization is held fixed throughout. Different BLAS implementations can change small numerical differences and, eventually, sampled trajectories even with the same random seed. The intervals quantify sampling variability for this setup; they do not describe variation across architectures, model initializations, or hardware.</p>
+</section>
+<section id="references" class="level2">
+<h2 class="anchored" data-anchor-id="references">References</h2>
+<ul>
+<li>Qi, P., Liu, Z., Zhou, X., Pang, T., Du, C., Lee, W. S., &amp; Lin, M. (2025). <a href="https://arxiv.org/abs/2510.26788">Defeating the Training-Inference Mismatch via FP16</a>.</li>
+<li>Yao, F., Liu, L., Zhang, D., Dong, C., Shang, J., &amp; Gao, J. (2025). <a href="https://fengyao.notion.site/off-policy-rl">Your Efficient RL Framework Secretly Brings You Off-Policy RL Training</a>.</li>
+<li>Liu, J., Li, Y., Fu, Y., Wang, J., Liu, Q., &amp; Shen, Y. (2025). <a href="https://yingru.notion.site/When-Speed-Kills-Stability-Demystifying-RL-Collapse-from-the-Training-Inference-Mismatch-271211a558b7808d8b12d403fd15edda">When Speed Kills Stability: Demystifying RL Collapse from the Training-Inference Mismatch</a>.</li>
+<li>He, H., &amp; Thinking Machines Lab. (2025). <a href="https://thinkingmachines.ai/blog/defeating-nondeterminism-in-llm-inference/">Defeating Nondeterminism in LLM Inference</a>.</li>
+<li>MiniMax. (2025). <a href="https://arxiv.org/abs/2506.13585">MiniMax-M1: Scaling Test-Time Compute Efficiently with Lightning Attention</a>.</li>
+<li>Zheng, C., Liu, S., Li, M., et al.&nbsp;(2025). <a href="https://arxiv.org/abs/2507.18071">Group Sequence Policy Optimization</a>.</li>
+<li>Zheng, C., Dang, K., Yu, B., et al.&nbsp;(2025). <a href="https://arxiv.org/abs/2512.01374">Stabilizing Reinforcement Learning with LLMs: Formulation and Practices</a>.</li>
+<li>Zhang, Y., Li, Y., Liu, J., Xu, J., Li, Z., Liu, Q., &amp; Li, H. (2026). <a href="https://arxiv.org/abs/2602.01826">Beyond Precision: Training-Inference Mismatch is an Optimization Problem and Simple LR Scheduling Fixes It</a>.</li>
+<li>Micikevicius, P., Narang, S., Alben, J., et al.&nbsp;(2018). <a href="https://arxiv.org/abs/1710.03740">Mixed Precision Training</a>. ICLR 2018.</li>
+<li>Kalamkar, D., Mudigere, D., Mellempudi, N., et al.&nbsp;(2019). <a href="https://arxiv.org/abs/1905.12322">A Study of BFLOAT16 for Deep Learning Training</a>.</li>
+</ul>
+
+
+</section>
+
+ ]]></description>
+  <category>RL</category>
+  <category>LLM</category>
+  <category>numerics</category>
+  <guid>https://qianrongwu.com/posts/bf16-vs-fp16/</guid>
+  <pubDate>Sat, 26 Sep 2026 07:00:00 GMT</pubDate>
+  <media:content url="https://qianrongwu.com/posts/bf16-vs-fp16/figs/fig4_sequence_mismatch.png" medium="image" type="image/png" height="77" width="144"/>
+</item>
 <item>
   <title>Model-Assisted Annotation: From Labels to Reliable Estimates</title>
   <link>https://qianrongwu.com/posts/model-assisted-annotation/</link>
