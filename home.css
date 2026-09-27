@@ -14,3 +14,67 @@
   max-width: 100%;
   height: auto;
 }
+
+/* Dates are a quiet line below the excerpt, rather than a separate column. */
+.quarto-listing-default .quarto-post {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 30%;
+  grid-template-rows: max-content 1fr;
+  grid-template-areas:
+    "body thumbnail"
+    "metadata thumbnail";
+  gap: 0.4rem 2rem;
+  align-items: start;
+  padding-bottom: 1.25rem;
+}
+
+.quarto-listing-default .quarto-post > .body {
+  grid-area: body;
+  min-width: 0;
+}
+
+.quarto-listing-default .quarto-post > .thumbnail {
+  grid-area: thumbnail;
+  min-width: 0;
+}
+
+.quarto-listing-default .thumbnail img {
+  margin-top: 0;
+}
+
+.quarto-listing-default .listing-description,
+.quarto-listing-default .listing-description p:last-child {
+  margin-bottom: 0;
+}
+
+.quarto-listing-default .quarto-post > .metadata {
+  grid-area: metadata;
+  margin: 0;
+  padding: 0;
+  font-size: 0.75rem;
+  line-height: 1.5;
+  color: #6c757d;
+}
+
+.quarto-listing-default .metadata a {
+  color: inherit;
+}
+
+.quarto-listing-default .listing-date::before {
+  content: "Date: ";
+}
+
+@media (max-width: 767.98px) {
+  .quarto-listing-default .quarto-post {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto auto;
+    grid-template-areas:
+      "body"
+      "metadata"
+      "thumbnail";
+  }
+
+  .quarto-listing-default .quarto-post > .thumbnail {
+    margin-top: 0.5rem;
+  }
+}
